@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ job.title }} - Job Details | RoyalVista</title>
+    <!-- Open Graph for Social Sharing -->
+    <meta property="og:title" content="{{ job.title }} | RoyalVista Tech Solutions">
+    <meta property="og:description" content="Check out this opportunity! Click to read more and apply.">
+    <meta property="og:image"
+        content="{{ url_for('static', filename=job.image_url, _external=True) if job.image_url else url_for('static', filename='img/default_job.png', _external=True) }}">
+    <meta property="og:url" content="{{ request.url }}">
+    <meta property="og:type" content="website">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Inter:wght@400;500;600&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        body {
+            padding-top: 100px;
+        }
+
+        .detail-container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 0 2rem;
+        }
+
+        .job-header {
+            margin-bottom: 2rem;
+        }
+
+        .job-banner {
+            width: 100%;
+            max-height: 500px;
+            object-fit: cover;
+            border-radius: 12px;
+            margin-bottom: 2rem;
+            display: block;
+        }
+
+        .job-info-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 2.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .job-description {
+            line-height: 1.8;
+            color: var(--text-color);
+            font-size: 1.1rem;
+            white-space: pre-line;
+        }
+
+        .job-description h2,
+        .job-description h3 {
+            color: #fff;
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+        }
+
+        .job-description ul {
+            margin-left: 1.5rem;
+            margin-bottom: 1.5rem;
+            list-style: disc;
+        }
+
+        .apply-bar {
+            position: sticky;
+            bottom: 2rem;
+            background: rgba(13, 13, 13, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 1rem 1.5rem;
+            border-radius: 16px;
+            border: 1px solid var(--primary-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 3rem;
+            z-index: 100;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .social-share-strip {
+            display: flex;
+            gap: 1rem;
+            margin-top: 2rem;
+            padding-top: 2rem;
+            border-top: 1px solid var(--border-color);
+        }
+
+        /* Apply Bar Mobile Responsiveness */
+        @media (max-width: 768px) {
+            .apply-bar {
+                padding: 0.85rem 1rem;
+                border-radius: 12px;
+                bottom: 1rem;
+                margin-top: 2rem;
+                flex-direction: column;
+                gap: 0.75rem;
+                text-align: center;
+            }
+
+            .apply-bar h4 {
+                font-size: 0.9rem !important;
+            }
+
+            .apply-bar p {
+                font-size: 0.75rem !important;
+            }
+
+            .apply-bar .btn {
+                width: 100%;
+                padding: 0.7rem 1.5rem !important;
+                font-size: 0.9rem !important;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .apply-bar {
+                padding: 0.75rem 0.85rem;
+                bottom: 0.5rem;
+            }
+
+            .apply-bar h4 {
+                font-size: 0.85rem !important;
+            }
+
+            .apply-bar .btn {
+                padding: 0.65rem 1.25rem !important;
+                font-size: 0.85rem !important;
+            }
+        }
+
+        .social-icon {
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 255, 255, 0.05);
+            color: #fff;
+            transition: 0.3s;
+        }
+
+        .social-icon:hover {
+            background: var(--primary-color);
+            transform: translateY(-3px);
+        }
+    </style>
+</head>
+
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <a href="{{ url_for('home') }}" class="logo">RoyalVista<span class="highlight"> Tech Solutions</span></a>
+            <ul class="nav-menu">
+                <li><a href="{{ url_for('home') }}" class="nav-link">Home</a></li>
+                <li><a href="{{ url_for('jobs') }}" class="nav-link">Job Updates</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="detail-container">
+        <a href="{{ url_for('jobs') }}"
+            style="display:inline-block; margin-bottom:1.5rem; color:var(--primary-color); font-weight:500;"><i
+                class="fas fa-arrow-left"></i> Back to All Jobs</a>
+
+        <div class="job-info-card">
+            <header class="job-header" style="margin-bottom: 2rem;">
+                <h1 style="font-size: 2.5rem; line-height: 1.2; margin-bottom: 1rem;">{{ job.title }}</h1>
+                <div style="display:flex; gap: 0.8rem; flex-wrap:wrap;">
+                    {% for tag in job.categories.split(';') %}
+                    <span class="tag" style="padding: 0.4rem 1rem; font-size:0.85rem;">{{ tag }}</span>
+                    {% endfor %}
+                    <span class="tag"
+                        style="background:rgba(3, 218, 198, 0.1); color:var(--secondary-color); padding: 0.4rem 1rem; font-size:0.85rem;">
+                        <i class="fas fa-graduation-cap" style="margin-right:5px;"></i> Eligible:
+                        {{ job.eligible_years.replace(';', ', ') }}
+                    </span>
+                </div>
+            </header>
+
+            {% if job.image_url %}
+            <img src="{{ url_for('static', filename=job.image_url) }}" class="job-banner" alt="{{ job.title }}">
+            {% endif %}
+
+            <div class="job-description">
+                {{ job.description | safe }}
+            </div>
+
+            <div class="social-share-strip">
+                <span style="font-weight: 600; align-self: center; margin-right: 1rem;">Share this opportunity:</span>
+                <a href="mailto:?subject={{ job.title }}&body=Check out this job: {{ url_for('job_detail', job_id=job.id, _external=True) }}"
+                    class="social-icon"><i class="fas fa-envelope"></i></a>
+                <a href="https://wa.me/?text={{ job.title }}: {{ url_for('job_detail', job_id=job.id, _external=True) }}"
+                    target="_blank" class="social-icon"><i class="fab fa-whatsapp"></i></a>
+                <a href="#" onclick="navigator.share({title: '{{ job.title }}', url: window.location.href})"
+                    class="social-icon"><i class="fas fa-share-alt"></i></a>
+            </div>
+        </div>
+
+        <div class="apply-bar">
+            <div>
+                <p style="margin:0; font-size:0.8rem; color:var(--text-muted);">Interested in this role?</p>
+                <h4 style="margin:0; color:#fff; font-size:1rem;">Don't miss the deadline</h4>
+            </div>
+            <a href="{{ job.external_link }}" target="_blank" class="btn btn-primary"
+                style="padding: 0.75rem 2rem; font-size: 0.95rem;">Apply
+                Now <i class="fas fa-external-link-alt"></i></a>
+        </div>
+    </div>
+
+    <footer style="margin-top:10rem; border-top:1px solid var(--border-color); padding:3rem 0; text-align:center;">
+        <div class="container">
+            <p>&copy; 2026 RoyalVista Tech Solutions. All rights reserved.</p>
+        </div>
+    </footer>
+</body>
+
+</html>

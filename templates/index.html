@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description"
+        content="RoyalVista Tech Solutions - Professional Web Design, Logo Design, Video Editing, and Creative Tech Services. Boosting your digital presence with innovation.">
+    <meta name="keywords"
+        content="Web Design, Logo Design, Video Editing, Thumbnail Design, Tech Solutions, RoyalVista, Professional Digital Services">
+    <meta name="author" content="RoyalVista Tech Solutions">
+    <title>RoyalVista Tech Solutions | Professional Digital Services & Creative Solutions</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Inter:wght@400;500;600&display=swap"
+        rel="stylesheet">
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css', v=6) }}">
+
+    <!-- Google Analytics Integration -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        gtag('js', new Date());
+        gtag('config', 'G-XXXXXXXXXX');
+    </script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/chatbot.css') }}">
+</head>
+
+<body data-authenticated="{{ 'true' if current_user.is_authenticated else 'false' }}">
+
+    <header>
+        <nav class="navbar">
+            <div class="container">
+                <a href="#home" class="logo">RoyalVista<span class="highlight"> Tech Solutions</span></a>
+                <div class="menu-toggle" id="mobile-menu">
+                    <span class="bar"></span><span class="bar"></span><span class="bar"></span>
+                </div>
+                <ul class="nav-menu">
+                    <li><a href="#home" class="nav-link">Home</a></li>
+                    <li><a href="#about" class="nav-link">About</a></li>
+                    <li><a href="#services" class="nav-link">Services</a></li>
+                    <li><a href="#portfolio" class="nav-link">Portfolio</a></li>
+                    <li><a href="#contact" class="nav-link">Contact</a></li>
+                    <li><a href="{{ url_for('jobs') }}" class="nav-link">Job Updates</a></li>
+
+                    {% if current_user.is_authenticated %}
+                    <li class="nav-icons">
+                        <div class="notif-bell" id="notifBell">
+                            <i class="fas fa-bell"></i>
+                            {% if unread_count > 0 %}
+                            <span class="notif-badge">{{ unread_count }}</span>
+                            {% endif %}
+                        </div>
+                        <div class="notif-dropdown" id="notifDropdown">
+                            <div class="notif-header">
+                                <h4>Notifications</h4>
+                                <button onclick="document.getElementById('notifDropdown').classList.remove('active')"
+                                    style="background: transparent; border: none; color: var(--text-muted); cursor: pointer; font-size: 1.2rem; padding: 0; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                            <div class="notif-list">
+                                {% for n in header_notifications %}
+                                <div class="notif-item {{ 'unread' if not n.is_read else '' }}" data-id="{{ n.id }}"
+                                    data-link="{{ n.link or '#' }}" onclick="handleNotifClick(this)">
+                                    <h5>{{ n.title }}</h5>
+                                    <p>{{ n.message }}</p>
+                                    <span class="time">{{ n.created_at.strftime('%H:%M') }}</span>
+                                </div>
+                                {% else %}
+                                <div class="notif-item" style="text-align:center;">
+                                    <p>No notifications yet.</p>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </li>
+                    <li><a href="{{ url_for('dashboard') }}" class="nav-link btn-cta">Dashboard</a></li>
+                    {% else %}
+                    <li><a href="{{ url_for('login') }}" target="blank" class="nav-link btn-cta">Login</a></li>
+                    {% endif %}
+                </ul>
+            </div>
+        </nav>
+    </header>
+
+    <main>
+        <div class="container flash-messages" style="margin-top: 100px; position:relative; z-index:1001;">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            {% for category, message in messages %}
+            <div class="alert alert-{{ category }}"
+                style="padding: 1rem; margin-bottom: 1rem; border-radius: 8px; background: rgba(0,0,0,0.8); border: 1px solid var(--border-color); color: #fff;">
+                {{ message }}
+            </div>
+            {% endfor %}
+            {% endif %}
+            {% endwith %}
+        </div>
+        <!-- Hero Section -->
+        <section id="home" class="hero">
+            <div class="hero-bg-overlay"></div>
+            <div class="container hero-content">
+                <h1 class="animate-up">{{ (content.get('hero_title', 'RoyalVista Tech Solutions<br>Empowering Brands
+                    with <span class="highlight">Innovation</span>'))|safe }}</h1>
+                <p class="animate-up delay-1">{{ content.get('hero_subtitle', 'Premium Web Design, Logo Identity, and
+                    Video Solutions.') }}</p>
+                <div class="hero-btns animate-up delay-2">
+                    <a href="{{ url_for('register') if not current_user.is_authenticated else url_for('dashboard') }}"
+                        class="btn btn-primary">Get Started</a>
+                    <a href="#portfolio" class="btn btn-secondary">View Work</a>
+                </div>
+            </div>
+            <div class="scroll-down">
+                <a href="#about"><i class="fas fa-chevron-down"></i></a>
+            </div>
+        </section>
+
+        <!-- About Section -->
+        <section id="about" class="section">
+            <div class="container">
+                <div class="section-header">
+                    <h2 class="section-title">{{ (content.get('about_title', 'About <span
+                            class="highlight">RoyalVista</span>'))|safe }}</h2>
+                    <p class="section-subtitle">Pioneering digital excellence through creativity and technology.</p>
+                </div>
+                <div class="about-content">
+                    <div class="about-text">
+                        <h3>Turning Visions into Reality</h3>
+                        <p>{{ content.get('about_text', 'We are a dedicated team of digital creators specializing in
+                            building strong online identities for businesses and professionals globally.') }}</p>
+                        <div class="skills-grid">
+                            <div class="skill-tag">Enterprise Web Apps</div>
+                            <div class="skill-tag">Visual Identity</div>
+                            <div class="skill-tag">Cinematic Editing</div>
+                            <div class="skill-tag">Growth SEO</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Services Section -->
+        <section id="services" class="section bg-darker">
+            <div class="container">
+                <div class="section-header">
+                    <h2 class="section-title">Our <span class="highlight">Professional Services</span></h2>
+                    <p class="section-subtitle">Tailored solutions to elevate your brand presence.</p>
+                </div>
+                <div class="services-grid">
+                    {% for service in services %}
+                    <article class="service-card">
+                        <div class="icon-box"><i class="{{ service.icon_class or 'fas fa-cube' }}"></i></div>
+                        <h3>{{ service.title }}</h3>
+                        <p>{{ service.description }}</p>
+                        <a href="{{ url_for('dashboard') }}" class="service-link btn-small">Inquire More <i
+                                class="fas fa-arrow-right"></i></a>
+                    </article>
+                    {% endfor %}
+                </div>
+            </div>
+        </section>
+
+        <!-- Portfolio Section -->
+        <section id="portfolio" class="section">
+            <div class="container">
+                <div class="section-header">
+                    <h2 class="section-title">Featured <span class="highlight">Portfolio Showcase</span></h2>
+                    <p class="section-subtitle">A curated selection of our highest-impact projects.</p>
+                </div>
+
+                <div class="portfolio-filter">
+                    <button class="filter-btn active" data-filter="all">All</button>
+                    <button class="filter-btn" data-filter="web">Web Design</button>
+                    <button class="filter-btn" data-filter="logo">Logo Design</button>
+                    <button class="filter-btn" data-filter="video">Video Editing</button>
+                    <button class="filter-btn" data-filter="thumbnails">Thumbnails</button>
+                    <button class="filter-btn" data-filter="ads">Posters & Ads</button>
+                    <button class="filter-btn" data-filter="invitations">Wedding Invites</button>
+                    <button class="filter-btn" data-filter="seo">SEO & Marketing</button>
+                </div>
+
+                <div class="portfolio-grid" id="portfolioGrid">
+                    {% for item in portfolio %}
+                    <div class="portfolio-item card" data-category="{{ item.category }}">
+                        <div class="portfolio-img">
+                            {% if item.image_url %}
+                            <img src="{{ url_for('static', filename=item.image_url or 'assets/images/portfolio-web.png') }}"
+                                alt="{{ item.title }}" loading="lazy">
+                            {% else %}
+                            <div class="placeholder-img">{{ item.category.upper() }}</div>
+                            {% endif %}
+                            <span class="sample-badge">Sample Work</span>
+                        </div>
+                        <div class="portfolio-overlay">
+                            <h3>{{ item.title }}</h3>
+                            <p><span style="color: #e0e0e0;">Client:</span> {{ item.client_name or 'RoyalVista
+                                Exclusive' }}</p>
+                            {# Removed 'View Live Project' link as per request #}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </section>
+
+        <!-- Contact Section -->
+        <section id="contact" class="section bg-darker">
+            <div class="container">
+                <div class="contact-wrapper">
+                    <div class="contact-info">
+                        <h2>Grow Your <span class="highlight">Digital Presence</span></h2>
+                        <p>Start your project today with RoyalVista Tech Solutions.</p>
+                        <div class="contact-details">
+                            <div class="contact-item"><i
+                                    class="fas fa-envelope"></i><span>royalvistatechsolutions@gmail.com</span></div>
+                            <div class="contact-item"><i class="fas fa-clock"></i><span>24/7 Support for Active
+                                    Clients</span></div>
+                        </div>
+                    </div>
+                    <div class="contact-form-container">
+                        <div class="section-header">
+                            <h2 class="section-title">Contact <span class="highlight">Us</span></h2>
+                        </div>
+                        <form action="{{ url_for('contact') }}" method="POST" class="card">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <div class="form-group"><label>Full Name</label><input type="text" name="full_name"
+                                    required></div>
+                            <div class="form-group"><label>Email Address</label><input type="email" name="email"
+                                    required></div>
+                            <div class="form-group"><label>Phone Number</label><input type="text" name="phone" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Interested Service</label>
+                                <select name="service">
+                                    {% for s in services %}<option value="{{ s.title }}">{{ s.title }}</option>{% endfor
+                                    %}
+                                </select>
+                            </div>
+                            <div class="form-group"><label>Message</label><textarea name="message" rows="3"
+                                    required></textarea></div>
+                            <button type="submit" class="btn btn-primary full-width">Send Inquiry</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="bg-black">
+        <div class="container" style="padding: 4rem 0; text-align: center;">
+            <div class="footer-logo">RoyalVista<span class="highlight"> Tech Solutions</span></div>
+            <p>&copy; 2026 RoyalVista Tech Solutions. All rights reserved.</p>
+            <div class="social-links" style="justify-content: center; margin-top: 1rem;">
+                <a href="https://wa.me/+919380962377" target="_blank" aria-label="WhatsApp"><i
+                        class="fab fa-whatsapp"></i></a>
+                <a href="https://www.instagram.com/royalvistatechsolutions/" target="_blank" aria-label="WhatsApp"><i
+                        class="fab fa-instagram"></i></a>
+                <a href="#" aria-label="LinkedIn"><i class="fab fa-linkedin-in"></i></a>
+            </div>
+        </div>
+    </footer>
+
+    <!-- AI Chatbot Overlay -->
+    <div id="chatbot-root" class="chatbot-container">
+        <div id="chatWindow" class="chat-window">
+            <div class="chat-header">
+                <h3>RoyalVista AI Assistant</h3>
+                <button id="closeChat" aria-label="Close Chat"><i class="fas fa-times"></i></button>
+            </div>
+            <div id="chatBody" class="chat-body"></div>
+            <div class="chat-input-area">
+                <input type="text" id="chatInput" placeholder="How can we help?">
+                <button id="sendMessage" aria-label="Send Message"><i class="fas fa-paper-plane"></i></button>
+            </div>
+        </div>
+        <button id="chatToggle" class="chat-toggle-btn" aria-label="Toggle Chat"><i
+                class="fas fa-comments"></i></button>
+    </div>
+
+    <!-- Portfolio Preview Modal -->
+    <div id="portfolioPreviewModal" class="portfolio-modal-overlay">
+        <div class="portfolio-modal-content">
+            <button class="modal-close" onclick="closePreviewModal()"><i class="fas fa-times"></i></button>
+            <div class="modal-media" id="modalMedia">
+                <!-- Image or Video will be injected here -->
+            </div>
+            <div class="modal-info">
+                <div class="modal-text">
+                    <h3 id="modalTitle">Project Title</h3>
+                    <p id="modalCategory">Category</p>
+                </div>
+                <div class="modal-badge">
+                    <span class="sample-badge" style="position:static; margin:0;">Sample Work</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+    <script>
+        function handleNotifClick(el) {
+            const nid = el.getAttribute('data-id');
+            const link = el.getAttribute('data-link');
+            fetch(`/notifications/read/${nid}`).then(r => r.json()).then(data => {
+                window.location.href = link;
+            });
+        }
+    </script>
+</body>
+
+</html>

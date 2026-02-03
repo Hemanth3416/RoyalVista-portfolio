@@ -1,0 +1,316 @@
+/* ========================================
+   DASHBOARD MOBILE OPTIMIZATIONS
+   ======================================== */
+
+@media (max-width: 1024px) {
+    .dashboard-header h1 {
+        font-size: 2rem !important;
+    }
+
+    .admin-actions {
+        flex-direction: column;
+        align-items: flex-start !important;
+    }
+}
+
+@media (max-width: 768px) {
+
+    /* Dashboard Header */
+    .dashboard-header {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+    }
+
+    .dashboard-header h1 {
+        font-size: 1.75rem !important;
+    }
+
+    .admin-actions {
+        width: 100%;
+        justify-content: flex-start !important;
+    }
+
+    .admin-actions .btn-small {
+        font-size: 0.8rem !important;
+        padding: 0.5rem 1rem !important;
+    }
+
+    /* Admin Navigation Tabs */
+    .admin-nav {
+        display: flex;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        white-space: nowrap;
+        padding-bottom: 0.5rem;
+        margin-bottom: 1.5rem;
+        gap: 0.5rem;
+    }
+
+    .tab-link {
+        flex-shrink: 0;
+        padding: 0.6rem 1rem;
+        font-size: 0.8rem;
+    }
+
+    /* Stats Cards */
+    .grid-dashboard {
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)) !important;
+    }
+
+    .stat-card {
+        padding: 1rem !important;
+    }
+
+    .stat-card h3 {
+        font-size: 1.75rem !important;
+    }
+
+    .stat-card p {
+        font-size: 0.85rem !important;
+    }
+
+    /* Tables */
+    .table-responsive {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    table {
+        font-size: 0.85rem;
+    }
+
+    table th,
+    table td {
+        padding: 0.6rem 0.5rem !important;
+    }
+
+    /* Forms in Modals */
+    .edit-form-overlay .card {
+        width: 95% !important;
+        max-width: 500px;
+        max-height: 90vh;
+        overflow-y: auto;
+    }
+
+    .form-group {
+        margin-bottom: 1rem;
+    }
+
+    .form-group label {
+        font-size: 0.9rem;
+    }
+
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+        font-size: 0.9rem;
+        padding: 0.7rem;
+    }
+}
+
+@media (max-width: 480px) {
+
+    /* Dashboard Header */
+    .dashboard-header h1 {
+        font-size: 1.5rem !important;
+    }
+
+    .dashboard-header p {
+        font-size: 0.85rem;
+    }
+
+    .dashboard-header small {
+        display: block;
+        margin-left: 0 !important;
+        margin-top: 0.25rem;
+    }
+
+    /* Buttons */
+    .admin-actions .btn-small {
+        font-size: 0.75rem !important;
+        padding: 0.45rem 0.8rem !important;
+    }
+
+    /* Tabs */
+    .tab-link {
+        padding: 0.5rem 0.75rem;
+        font-size: 0.7rem;
+    }
+
+    .tab-link i {
+        margin-right: 0.25rem;
+    }
+
+    /* Stats Grid */
+    .grid-dashboard {
+        grid-template-columns: 1fr !important;
+        gap: 1rem !important;
+    }
+
+    /* Cards */
+    .card {
+        padding: 1rem !important;
+    }
+
+    .card h3 {
+        font-size: 1.1rem !important;
+    }
+
+    /* Tables */
+    table {
+        font-size: 0.75rem;
+    }
+
+    table th,
+    table td {
+        padding: 0.5rem 0.4rem !important;
+    }
+
+    .btn-small {
+        font-size: 0.7rem !important;
+        padding: 0.3rem 0.6rem !important;
+    }
+
+    /* Modal Forms */
+    .edit-form-overlay .card {
+        width: 100% !important;
+        margin: 0.5rem;
+        padding: 1.25rem !important;
+    }
+
+    .edit-form-overlay h3 {
+        font-size: 1.1rem !important;
+    }
+
+    /* User Details Modal Navigation Arrows */
+    .edit-form-overlay button[onclick*="navigateUserProfile"] {
+        width: 35px !important;
+        height: 35px !important;
+        font-size: 1rem !important;
+    }
+}
+
+@media (max-width: 375px) {
+    .dashboard-header h1 {
+        font-size: 1.3rem !important;
+    }
+
+    .tab-link {
+        padding: 0.4rem 0.6rem;
+        font-size: 0.65rem;
+    }
+
+    .admin-actions {
+        gap: 0.5rem !important;
+    }
+}
+/* ========================================
+   BUTTON RESPONSIVENESS FIXES
+   ======================================== */
+
+/* Ensure all buttons are touch-friendly */
+.btn-small {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.btn-small:active {
+    transform: scale(0.95);
+}
+
+/* Portfolio edit buttons */
+.portfolio-edit-trigger {
+    white-space: nowrap;
+}
+
+/* Mobile button improvements */
+@media (max-width: 768px) {
+    .btn-small {
+        font-size: 0.85rem;
+        padding: 0.6rem 1rem;
+        min-height: 44px;
+    }
+    
+    /* Make action buttons in tables full-width on mobile */
+    table td .btn-small {
+        width: 100%;
+        margin-bottom: 0.5rem;
+    }
+    
+    table td > div {
+        flex-direction: column;
+        width: 100%;
+    }
+}
+
+@media (max-width: 480px) {
+    .btn-small {
+        font-size: 0.8rem;
+        padding: 0.55rem 0.9rem;
+    }
+    
+    /* Ensure buttons don't shrink too much */
+    .btn-small i {
+        font-size: 0.9rem;
+    }
+}
+
+/* Fix for buttons inside cards */
+.portfolio-card-actions .btn-small,
+.job-card-actions .btn-small {
+    flex: 1;
+    min-width: 0;
+    text-align: center;
+}
+
+/* Ensure clickable area is large enough */
+button, .btn, .btn-small, a.btn-small {
+    -webkit-tap-highlight-color: rgba(108, 99, 255, 0.2);
+    touch-action: manipulation;
+}
+
+/* ========================================
+   MOBILE HEADER ACTION FIXES
+   ======================================== */
+
+/* Hide mobile logout button on larger screens */
+.mobile-logout-btn {
+    display: none !important;
+}
+
+@media (max-width: 768px) {
+    /* Allow header actions to wrap gracefully */
+    header > div {
+        flex-wrap: wrap;
+    }
+    
+    header > div > div:first-child {
+        width: 100%;
+        margin-bottom: 1rem;
+    }
+    
+    .admin-actions {
+        width: 100%;
+        justify-content: flex-start;
+        overflow-x: auto;
+        padding-bottom: 5px; /* Space for scrollbar if needed */
+    }
+    
+    /* Ensure logout button is visible and sizable */
+    .mobile-logout-btn {
+        display: inline-flex !important;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    /* Adjust button sizes for touch */
+    header .btn-small {
+        padding: 0.75rem 1rem !important;
+        font-size: 0.9rem !important;
+    }
+}

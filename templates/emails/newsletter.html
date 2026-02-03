@@ -1,0 +1,11 @@
+{% extends "emails/base_email.html" %}
+{% block content %}
+<h2>{{ subject }}</h2>
+<div class="newsletter-body">
+    {{ body | safe }}
+</div>
+<p style="font-size: 11px; margin-top: 30px; color: #999;">
+    You are receiving this because you are a valued client of RoyalVista Tech Solutions.
+    <br>If you wish to unsubscribe, please contact support.
+</p>
+{% endblock %}

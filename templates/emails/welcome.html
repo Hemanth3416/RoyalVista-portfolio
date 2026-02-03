@@ -1,0 +1,16 @@
+{% extends "emails/base_email.html" %}
+{% block content %}
+<h2>Welcome to RoyalVista!</h2>
+<p>Hi {{ user_name }},</p>
+<p>We're thrilled to have you join our community of digital innovators. Your account has been successfully created.</p>
+<p>With your RoyalVista account, you can:</p>
+<ul>
+    <li>Request premium web and design services.</li>
+    <li>Track your projects in real-time.</li>
+    <li>Download invoices and project assets.</li>
+    <li>Get 24/7 priority support.</li>
+</ul>
+<p>Ready to start your first project?</p>
+<a href="{{ url_for('dashboard', _external=True) }}" class="btn">Explore Services</a>
+<p>Best regards,<br>The RoyalVista Team</p>
+{% endblock %}

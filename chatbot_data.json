@@ -1,0 +1,161 @@
+{
+    "company_profile": {
+        "name": "RoyalVista Tech Solutions",
+        "legal_name": "RoyalVista Tech Solutions LLC",
+        "tagline": "Premium Quality. Unmatched Speed.",
+        "vision": "To provide premium digital solutions with unmatched quality and speed.",
+        "founded_year": 2026,
+        "founder": "A.V.Hemanth Kumar",
+        "brand_voice": {
+            "tone": "Professional, authoritative, yet innovative and accessible.",
+            "vocabulary_style": "Modern, tech-forward, results-oriented.",
+            "prohibited_phrases": [
+                "cheap services",
+                "discount",
+                "budget",
+                "no money down"
+            ]
+        }
+    },
+    "service_catalog": [
+        {
+            "id": "WEB_01",
+            "category": "Development",
+            "name": "Web Design",
+            "description": "Custom, responsive, and high-converting websites.",
+            "features": [
+                "Responsive Layouts",
+                "SEO Optimization",
+                "Fast Loading Speeds",
+                "CMS Integration"
+            ],
+            "process_duration": "Determined by project complexity and business requirements."
+        },
+        {
+            "id": "VIS_01",
+            "category": "Branding",
+            "name": "Logo Design",
+            "description": "Unique brand identities that stand out.",
+            "deliverables": [
+                "Vector files (AI, EPS)",
+                "PNG/JPG",
+                "Brand Style Guide"
+            ]
+        },
+        {
+            "id": "CONT_01",
+            "category": "Content",
+            "name": "Video Editing",
+            "description": "Professional video content for creators and brands.",
+            "specialties": [
+                "Short-form (Reels/TikTok)",
+                "Corporate Interviews",
+                "YouTube Content"
+            ]
+        },
+        {
+            "id": "VIS_02",
+            "category": "Social Media",
+            "name": "Poster & Thumbnail Design",
+            "description": "Eye-catching visuals for social media and marketing.",
+            "use_cases": [
+                "YouTube Thumbnails",
+                "Event Posters",
+                "Instagram Ads"
+            ]
+        },
+        {
+            "id": "VIS_03",
+            "category": "Events",
+            "name": "Wedding Invitations",
+            "description": "Elegant and memorable wedding invitation designs.",
+            "deliverables": [
+                "Digital Invitations",
+                "Print-ready Files",
+                "Custom Illustrations",
+                "RSVP Cards"
+            ]
+        },
+        {
+            "id": "MARK_01",
+            "category": "Marketing",
+            "name": "SEO Services",
+            "description": "Boost your online visibility and search rankings.",
+            "features": [
+                "Keyword Research",
+                "On-page Optimization",
+                "Technical SEO Audit",
+                "Content Strategy"
+            ]
+        },
+        {
+            "id": "MARK_02",
+            "category": "Marketing",
+            "name": "Social Media Marketing",
+            "description": "Grow your brand presence across social platforms.",
+            "features": [
+                "Content Calendar Planning",
+                "Post Design & Copywriting",
+                "Engagement Analytics",
+                "Platform Management"
+            ]
+        }
+    ],
+    "financial_terms": {
+        "payment_structure": {
+            "mandatory_advance": "50% of the total project value is required to initiate production.",
+            "final_payment": "Remaining balance due upon project completion and prior to final asset handover."
+        },
+        "refund_policy": {
+            "pre_confirmation": "If the project is cancelled before official confirmation, a refund equivalent to 25% of the total project price is available.",
+            "post_confirmation": "Once the project is confirmed and production begins, no refunds are issued.",
+            "calculation_basis": "All refund percentages are calculated based on the full project price, not the advance payment."
+        }
+    },
+    "operational_workflow": {
+        "onboarding": "Client registers via Dashboard -> Submits Service Request -> Consultation -> 50% Advance Payment -> Project Confirmation.",
+        "production_stages": [
+            {
+                "step": 1,
+                "name": "Discovery",
+                "desc": "Requirement gathering and asset collection."
+            },
+            {
+                "step": 2,
+                "name": "Drafting",
+                "desc": "Initial layout and concept creation."
+            },
+            {
+                "step": 3,
+                "name": "Review",
+                "desc": "Client feedback and revisions (3 rounds included)."
+            },
+            {
+                "step": 4,
+                "name": "Handover",
+                "desc": "Final delivery via client dashboard upon settlement of balance."
+            }
+        ]
+    },
+    "ai_knowledge_base": {
+        "target_audience": [
+            "Startup founders looking for rapid market entry.",
+            "Content creators needing high-end post-production.",
+            "SMEs transitioning to digital-first models."
+        ],
+        "faq": [
+            {
+                "question": "What is required to start my project?",
+                "answer": "To secure your slot and begin production, a mandatory 50% advance payment is required following your initial consultation."
+            },
+            {
+                "question": "Can I get a refund if I change my mind?",
+                "answer": "Before project confirmation, we offer a refund of 25% of the total project value. Please note that once a project is confirmed and moves into production, we do not offer refunds."
+            },
+            {
+                "question": "How long does a website take?",
+                "answer": "The timeline for professional web projects depends on the specific complexity and business days required for your custom solution."
+            }
+        ]
+    }
+}

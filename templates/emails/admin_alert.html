@@ -1,0 +1,13 @@
+{% extends "emails/base_email.html" %}
+{% block content %}
+<h2>New Action Alert</h2>
+<p>Hello Admin,</p>
+<p>A new event has occurred on the RoyalVista platform:</p>
+<div class="details">
+    <strong>Event:</strong> {{ event_type }}<br>
+    <strong>Details:</strong> {{ event_details }}<br>
+    <strong>User:</strong> {{ user_name }} ({{ user_email }})
+</div>
+<p>Please log in to the admin dashboard to take action.</p>
+<a href="{{ url_for('dashboard', _external=True) }}" class="btn">Go to Dashboard</a>
+{% endblock %}

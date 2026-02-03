@@ -1,0 +1,32 @@
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+env/
+venv/
+.env
+
+# Database
+instance/
+*.db
+
+# Secrets
+credentials.json
+client_secret.json
+
+# IDEs
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# App specific
+backups/
+server.log
+server.pid
+static/assets/uploads/*
+!static/assets/uploads/.gitkeep

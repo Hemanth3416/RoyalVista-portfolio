@@ -1,0 +1,14 @@
+{% extends "emails/base_email.html" %}
+{% block content %}
+<h2>Project Progress Update</h2>
+<p>Hi {{ user_name }},</p>
+<p>Your project <strong>{{ order_id }}</strong> has a new status update.</p>
+<div class="details">
+    <strong>New Status:</strong> {{ status }}<br>
+    {% if note %}
+    <strong>Admin Note:</strong> {{ note }}
+    {% endif %}
+</div>
+<p>Log in to your dashboard to see the latest timeline updates and files.</p>
+<a href="{{ url_for('dashboard', _external=True) }}" class="btn">View Project Timeline</a>
+{% endblock %}

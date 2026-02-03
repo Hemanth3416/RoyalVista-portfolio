@@ -1,0 +1,1672 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - RoyalVista Tech Solutions</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Inter:wght@400;500;600&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css', v=11) }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard-mobile.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/ux-fixes.css', v=2) }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/delete-fix.css', v=2) }}">
+    <style>
+        body {
+            padding-top: 80px;
+        }
+
+        .dashboard-container {
+            max-width: 1400px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .admin-nav {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            overflow-x: auto;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .tab-link {
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 0.6rem 1.2rem;
+            border-radius: 8px;
+            transition: 0.3s;
+            white-space: nowrap;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .tab-link.active {
+            background: var(--primary-color);
+            color: #fff;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+
+        th,
+        td {
+            padding: 1.2rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 0.85rem;
+        }
+
+        th {
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05rem;
+        }
+
+        .status-badge {
+            padding: 0.3rem 0.8rem;
+            border-radius: 50px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .status-Submitted {
+            background: rgba(108, 99, 255, 0.2);
+            color: var(--primary-color);
+        }
+
+        .status-In-Progress {
+            background: rgba(255, 193, 7, 0.2);
+            color: #ffc107;
+        }
+
+        .status-Completed {
+            background: rgba(3, 218, 198, 0.2);
+            color: var(--secondary-color);
+        }
+
+        .priority-Urgent {
+            background: rgba(255, 0, 0, 0.2);
+            color: #ff0000;
+        }
+
+        .priority-Normal {
+            background: rgba(0, 123, 255, 0.2);
+            color: #007bff;
+        }
+
+        .priority-High {
+            background: rgba(255, 165, 0, 0.2);
+            color: #ffa500;
+        }
+
+        .status-Resolved {
+            background: rgba(3, 218, 198, 0.2);
+            color: var(--secondary-color);
+        }
+
+        .status-Open {
+            background: rgba(255, 165, 0, 0.2);
+            color: #ffa500;
+        }
+
+        td {
+            vertical-align: top;
+        }
+
+        .timeline-box {
+            margin-top: 1rem;
+            border-left: 2px solid var(--primary-color);
+            padding-left: 1rem;
+            font-size: 0.8rem;
+            max-height: 250px;
+            overflow-y: auto;
+        }
+
+        .timeline-file-preview {
+            max-width: 200px;
+            border-radius: 8px;
+            margin-top: 0.5rem;
+            border: 1px solid #333;
+        }
+
+        .status-Reopened {
+            background: rgba(255, 107, 107, 0.2);
+            color: #ff6b6b;
+        }
+
+        .status-Rejected {
+            background: rgba(220, 53, 69, 0.2);
+            color: #dc3545;
+        }
+
+        .status-Invalid {
+            background: rgba(108, 117, 125, 0.2);
+            color: #6c757d;
+        }
+
+        .notif-item {
+            cursor: pointer;
+        }
+
+        .notif-item.unread {
+            background: rgba(108, 99, 255, 0.1);
+            border-left: 3px solid var(--primary-color);
+        }
+
+        .edit-form-overlay {
+            display: none;
+            background: rgba(0, 0, 0, 0.8);
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .notif-item {
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body data-must-update="{{ 'true' if must_update_profile else 'false' }}">
+    <nav class="navbar">
+        <div class="container" style="max-width: 1400px;">
+            <a href="{{ url_for('home') }}" class="logo">RoyalVista<span class="highlight"> Tech Solutions</span></a>
+            <div class="menu-toggle" id="mobile-menu">
+                <span class="bar"></span><span class="bar"></span><span class="bar"></span>
+            </div>
+            <ul class="nav-menu">
+                <li class="nav-icons">
+                    <div class="notif-bell" id="notifBell">
+                        <i class="fas fa-bell"></i>
+                        {% if unread_count > 0 %} <span class="notif-badge">{{ unread_count }}</span> {% endif %}
+                    </div>
+                    <div class="notif-dropdown" id="notifDropdown">
+                        <div class="notif-header">
+                            <h4>Notifications</h4>
+                        </div>
+                        <div class="notif-list">
+                            {% for n in header_notifications %}
+                            <div class="notif-item {{ 'unread' if not n.is_read else '' }}" data-id="{{ n.id }}"
+                                data-link="{{ n.link or '#' }}" onclick="handleNotifClick(this)">
+                                <h5>{{ n.title }}</h5>
+                                <p>{{ n.message }}</p>
+                                <span class="time">{{ n.created_at.strftime('%m-%d %H:%M') }}</span>
+                            </div>
+                            {% else %}<div class="notif-item">
+                                <p>No notifications.</p>
+                            </div>{% endfor %}
+                        </div>
+                    </div>
+                </li>
+                <li><a href="{{ url_for('home') }}" class="nav-link">Home</a></li>
+                <li><a href="{{ url_for('logout') }}" class="nav-link" style="color:#ff6384;">Logout</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="dashboard-container">
+        <div class="flash-messages">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}{% for category, msg in messages %}
+            <div class="alert alert-{{ category }}">{{ msg }}</div>
+            {% endfor %}{% endif %}
+            {% endwith %}
+        </div>
+
+        <header style="margin-bottom: 2.5rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; gap: 1rem;">
+                <div style="flex: 1; min-width: 250px;">
+                    <h1 style="font-size: 2.5rem; margin-bottom: 0.5rem;">{{ 'Admin Intelligence' if
+                        current_user.is_admin
+                        else 'Client Dashboard' }}</h1>
+                    <p class="text-muted">Welcome back, <span class="highlight" style="font-weight: 600;">{{
+                            current_user.username }}</span> <small
+                            style="margin-left: 10px; color: var(--primary-color);">[{{ current_user.custom_user_id
+                            }}]</small></p>
+                </div>
+                {% if current_user.is_admin %}
+                <div class="admin-actions" style="display: flex; gap: 0.75rem; align-items: center; flex-shrink: 0;">
+                    <a href="{{ url_for('home') }}" class="btn-small"
+                        style="background: rgba(255,255,255,0.05); color: #fff; border: 1px solid #333; padding: 0.6rem 1.2rem; border-radius: 8px; white-space: nowrap;">
+                        <i class="fas fa-arrow-left"></i> Homepage
+                    </a>
+                    <a href="{{ url_for('trigger_backup') }}" class="btn-small"
+                        style="background: rgba(255,255,255,0.05); color: #fff; border: 1px solid #333; padding: 0.6rem 1.2rem; border-radius: 8px; white-space: nowrap;">
+                        <i class="fas fa-database"></i> Run Backup
+                    </a>
+                    <a href="{{ url_for('logout') }}" class="btn-small mobile-logout-btn"
+                        style="background: rgba(255, 99, 132, 0.1); color: #ff6384; border: 1px solid #ff6384; padding: 0.6rem 1.2rem; border-radius: 8px; white-space: nowrap;">
+                        <i class="fas fa-sign-out-alt"></i> Logout
+                    </a>
+                </div>
+                {% else %}
+                <a href="{{ url_for('home') }}" class="back-btn" style="margin: 0; flex-shrink: 0; margin-right: 10px;">
+                    <i class="fas fa-arrow-left"></i> Back to Homepage
+                </a>
+                <a href="{{ url_for('logout') }}" class="btn-small mobile-logout-btn"
+                    style="background: rgba(255, 99, 132, 0.1); color: #ff6384; border: 1px solid #ff6384; padding: 0.6rem 1.2rem; border-radius: 8px; white-space: nowrap;">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </a>
+                {% endif %}
+            </div>
+        </header>
+
+        {% if current_user.is_admin %}
+        <div class="admin-nav">
+            <span class="tab-link active" onclick="openTab(event, 'tab-stats')"><i class="fas fa-chart-pie"></i>
+                Analytics</span>
+            <span class="tab-link" onclick="openTab(event, 'tab-orders')"><i class="fas fa-tasks"></i> Order
+                Management</span>
+            <span class="tab-link" onclick="openTab(event, 'tab-cms')"><i class="fas fa-keyboard"></i> Website
+                Content</span>
+            <span class="tab-link" onclick="openTab(event, 'tab-portfolio')"><i class="fas fa-swatchbook"></i>
+                Portfolio</span>
+            <span class="tab-link" onclick="openTab(event, 'tab-tickets')"><i class="fas fa-headset"></i> Support
+                Tickets
+                {% if unread_tickets_count > 0 %}
+                <span class="mini-badge priority-High" style="margin-left:5px; padding:2px 6px; font-size:0.7rem;">{{
+                    unread_tickets_count }}</span>
+                {% endif %}
+            </span>
+
+            <span class="tab-link" onclick="openTab(event, 'tab-jobs')"><i class="fas fa-briefcase"></i> Job
+                Updates</span>
+            {% if current_user.role == 'Super Admin' %}
+            <span class="tab-link" onclick="openTab(event, 'tab-permissions')"><i class="fas fa-user-shield"></i>
+                Permissions</span>
+            {% endif %}
+            <span class="tab-link" onclick="openTab(event, 'tab-leads')"><i class="fas fa-envelope-open-text"></i>
+                Inquiries</span>
+            <span class="tab-link" onclick="openTab(event, 'tab-logs')"><i class="fas fa-history"></i> Audit Logs</span>
+            <span class="tab-link" onclick="openTab(event, 'tab-newsletter')"><i class="fas fa-paper-plane"></i>
+                Newsletter & Alerts</span>
+        </div>
+
+        <!-- Tab: Leads / Inquiries -->
+        <div id="tab-leads" class="tab-content">
+            <div class="card">
+                <h3>Contact Form Inquiries</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Name</th>
+                            <th>Contact</th>
+                            <th>Service Interest</th>
+                            <th>Message</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for lead in leads %}
+                        <tr>
+                            <td class="text-muted">{{ lead.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                            <td>{{ lead.full_name }}</td>
+                            <td>
+                                <div>{{ lead.email }}</div>
+                                <small class="text-muted">{{ lead.phone }}</small>
+                            </td>
+                            <td><span class="mini-badge" style="background:#333; color:#fff;">{{ lead.service }}</span>
+                            </td>
+                            <td style="max-width: 300px;">{{ lead.message }}</td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="5" style="text-align: center; padding: 2rem;">No new inquiries used contact
+                                form.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Tab: Analytics -->
+        <div id="tab-stats" class="tab-content active">
+            <div class="grid-dashboard"
+                style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem;">
+                <div class="card stat-card">
+                    <span class="val">{{ stats.total_users }}</span>
+                    <span class="label">Total Clients</span>
+                </div>
+                <div class="card stat-card">
+                    <span class="val">{{ stats.total_orders }}</span>
+                    <span class="label">Total Orders</span>
+                </div>
+                <div class="card stat-card">
+                    <span class="val" style="color:var(--secondary-color);">{{ stats.completed }}</span>
+                    <span class="label">Delivered Projects</span>
+                </div>
+                <div class="card stat-card">
+                    <span class="val" style="color:var(--primary-color);">{{ stats.submitted + stats.in_progress
+                        }}</span>
+                    <span class="label">Active Projects</span>
+                </div>
+            </div>
+
+            <!-- Integrated User Directory -->
+            <div class="search-bar" style="margin-top: 3.5rem; margin-bottom: 1rem;">
+                <div class="search-inner">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="userSearchInput" placeholder="Search Users by Name, Email, ID..."
+                        onkeyup="filterUsers()">
+                </div>
+            </div>
+
+            <div class="card">
+                <h3 style="margin-bottom: 1.5rem; display: flex; align-items: center; gap: 12px; font-size: 1.4rem;">
+                    <i class="fas fa-users" style="color: var(--primary-color);"></i> Registered User Directory
+                </h3>
+                <div class="table-responsive">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>S.No</th>
+                                <th>User ID</th>
+                                <th>Username</th>
+                                <th>Contact Details</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="userTableBody">
+                            {% for u in users %}
+                            <tr class="user-row">
+                                <td>{{ loop.index }}</td>
+                                <td class="highlight" style="font-size: 0.8rem; font-weight: 600; cursor: pointer;"
+                                    onclick="showUserDetails('{{ u.custom_user_id }}', '{{ u.username }}', '{{ u.email }}', '{{ u.phone_number or 'N/A' }}', '{{ u.role }}', {{ u.orders|length }})">
+                                    <i class="fas fa-user-circle" style="margin-right: 5px;"></i>{{ u.custom_user_id }}
+                                </td>
+                                <td>{{ u.username }}</td>
+                                <td>
+                                    <div>{{ u.email }}</div>
+                                    <small class="text-muted">{{ u.phone_number or 'No phone number' }}</small>
+                                </td>
+                                <td>
+                                    <span
+                                        class="mini-badge status-{{ 'active' if u.is_active_status else 'inactive' }}">
+                                        {{ 'Active' if u.is_active_status else 'Inactive' }}
+                                    </span>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="5" class="text-muted" style="text-align: center; padding: 3rem;">
+                                    <i class="fas fa-user-slash"
+                                        style="display: block; font-size: 2rem; margin-bottom: 1rem; opacity: 0.5;"></i>
+                                    No registered users found in database.
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: Order Management -->
+        <div id="tab-orders" class="tab-content">
+            <div class="search-bar">
+                <form action="{{ url_for('dashboard') }}" class="search-inner">
+                    <i class="fas fa-search"></i>
+                    <input type="text" name="q" placeholder="Search by Order ID, User ID, Username, or Phone..."
+                        value="{{ request.args.get('q', '') }}">
+                </form>
+            </div>
+            <div class="card">
+                <div class="table-responsive">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>S.No</th>
+                                <th>Order ID</th>
+                                <th>User Info</th>
+                                <th>Service & Details</th>
+                                <th>Timeline & Progress</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for order in orders %}
+                            <tr id="order-{{ order.id }}">
+                                <td>{{ loop.index }}</td>
+                                <td class="highlight" style="font-weight: 600;">{{ order.custom_order_id }}</td>
+                                <td>
+                                    <div>{{ order.client.username }}</div>
+                                    <small class="text-muted">{{ order.client.email }}</small>
+                                </td>
+                                <td>
+                                    <div style="font-weight: 600; color: var(--primary-color);">{{ order.service_name }}
+                                    </div>
+                                    <div
+                                        style="font-size: 0.85rem; margin-top: 5px; color: #ddd; max-height: 100px; overflow-y: auto;">
+                                        {{ order.details }}</div>
+                                </td>
+                                <td>
+                                    <span class="status-badge status-{{ order.status.replace(' ', '-') }}">{{
+                                        order.status
+                                        }}</span>
+                                    <div class="timeline-box">
+                                        {% for event in order.timeline %}
+                                        <div class="timeline-item">
+                                            <strong>{{ event.timestamp.strftime('%m-%d') }}:</strong> {{ event.note }}
+                                            {% if event.file_url %}
+                                            <div style="margin-top:5px;">
+                                                {% if event.file_type == 'image' %}
+                                                <img src="{{ url_for('static', filename=event.file_url) }}"
+                                                    class="timeline-file-preview" alt="Preview">
+                                                {% elif event.file_type == 'video' %}
+                                                <video src="{{ url_for('static', filename=event.file_url) }}" controls
+                                                    class="timeline-file-preview"></video>
+                                                {% else %}
+                                                <a href="{{ url_for('static', filename=event.file_url) }}"
+                                                    target="_blank" style="color:var(--primary-color);"><i
+                                                        class="fas fa-file-pdf"></i> View
+                                                    Document</a>
+                                                {% endif %}
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                </td>
+                                <td>
+                                    <form method="POST" enctype="multipart/form-data"
+                                        style="display:flex; flex-direction:column; gap: 0.5rem;">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <input type="hidden" name="update_status" value="1">
+                                        <input type="hidden" name="order_id" value="{{ order.id }}">
+                                        <div class="form-group mb-2">
+                                            <select name="status" data-id="{{ order.id }}"
+                                                onchange="toggleOutputField(this.getAttribute('data-id'), this.value)"
+                                                class="form-control"
+                                                style="padding: 6px; font-size: 0.85rem; border-radius: 4px; background: #111; color: #fff; border: 1px solid #333; width: 100%;">
+                                                <option value="Submitted" {{ 'selected' if order.status=='Submitted' }}>
+                                                    Submitted</option>
+                                                <option value="In Progress" {{ 'selected' if order.status=='In Progress'
+                                                    }}>
+                                                    In Progress</option>
+                                                <option value="Completed" {{ 'selected' if order.status=='Completed' }}>
+                                                    Completed</option>
+                                                <option value="Reopened" {{ 'selected' if order.status=='Reopened' }}>
+                                                    Reopened
+                                                </option>
+                                                <option value="Rejected" {{ 'selected' if order.status=='Rejected' }}>
+                                                    Rejected
+                                                </option>
+                                                <option value="Invalid" {{ 'selected' if order.status=='Invalid' }}>
+                                                    Invalid
+                                                </option>
+                                            </select>
+                                        </div>
+                                        <div class="form-group mb-2" style="display:flex; align-items:center; gap:5px;">
+                                            <input type="file" name="timeline_file" id="file_{{ order.id }}"
+                                                class="inputfile" data-multiple-caption="{count} files selected"
+                                                style="display:none;"
+                                                onchange="document.getElementById('file_label_{{order.id}}').innerText = 'File Selected'">
+                                            <label for="file_{{ order.id }}" id="file_label_{{order.id}}"
+                                                class="btn-small btn-secondary"
+                                                style="cursor:pointer; font-size:0.75rem; padding: 4px 8px; width:100%; text-align:center;">
+                                                <i class="fas fa-paperclip"></i> Attach File
+                                            </label>
+                                        </div>
+                                        <div id="output_group_{{ order.id }}" class="output-field"
+                                            style="margin-bottom: 0.5rem; display: none;">
+                                            <input type="text" name="output_url" placeholder="Project Link (URL)"
+                                                style="padding: 6px; font-size: 0.75rem; background: #111; border: 1px solid #444; border-radius: 4px; color: #fff; width: 100%;">
+                                        </div>
+                                        <button type="submit" class="btn-small btn-primary" style="width: 100%;">Update
+                                            Status</button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: CMS -->
+        <div id="tab-cms" class="tab-content">
+            <div class="card">
+                <h3>Website Text Content</h3>
+                <div class="grid-dashboard"
+                    style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 2rem;">
+                    {% include 'cms_forms.html' ignore missing %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: Portfolio -->
+        <div id="tab-portfolio" class="tab-content">
+            <div class="card">
+                <div
+                    style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem; flex-wrap: wrap; gap: 1rem;">
+                    <h3 style="margin: 0;">Managed Showcase</h3>
+                    <button class="btn-small btn-primary" onclick="openPortfolioModal('add')">
+                        <i class="fas fa-plus"></i> Add Item
+                    </button>
+                </div>
+
+                <!-- Desktop Table View -->
+                <div class="portfolio-list portfolio-table-view">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Visual</th>
+                                <th>Title</th>
+                                <th>Category</th>
+                                <th>Client</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for p in portfolio %}
+                            <tr id="portfolio-{{ p.id }}">
+                                <td data-label="Visual">
+                                    <img src="{{ url_for('static', filename=p.image_url or 'assets/images/portfolio-web.png') }}"
+                                        style="width: 50px; height: 50px; border-radius: 8px; object-fit: cover; border: 1px solid var(--border-color);">
+                                </td>
+                                <td data-label="Title">{{ p.title }}</td>
+                                <td data-label="Category">
+                                    <span class="tag"
+                                        style="background: rgba(108, 99, 255, 0.1); color: var(--primary-color); padding: 0.3rem 0.8rem; border-radius: 20px; font-size: 0.75rem;">
+                                        {{ p.category }}
+                                    </span>
+                                </td>
+                                <td data-label="Client">{{ p.client_name or 'N/A' }}</td>
+                                <td data-label="Actions">
+                                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                        <button class="btn-small portfolio-edit-trigger" data-id="{{ p.id }}"
+                                            data-title="{{ p.title }}" data-cat="{{ p.category }}"
+                                            data-link="{{ p.external_link or '' }}"
+                                            data-client="{{ p.client_name or '' }}"
+                                            style="background: rgba(3, 218, 198, 0.1); color: var(--secondary-color); border: 1px solid var(--secondary-color);">
+                                            <i class="fas fa-edit"></i> Edit
+                                        </button>
+                                        <a href="{{ url_for('delete_portfolio', item_id=p.id) }}"
+                                            onclick="return confirm('Delete this portfolio item?')" class="btn-small"
+                                            style="background: rgba(255, 99, 132, 0.1); color: #ff6384; border: 1px solid #ff6384;">
+                                            <i class="fas fa-trash-alt"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Mobile Card View -->
+                <div class="portfolio-card-view">
+                    {% for p in portfolio %}
+                    <div class="portfolio-card" id="portfolio-card-{{ p.id }}">
+                        <div class="portfolio-card-header">
+                            <img src="{{ url_for('static', filename=p.image_url or 'assets/images/portfolio-web.png') }}"
+                                class="portfolio-card-img">
+                            <div class="portfolio-card-info">
+                                <h4 class="portfolio-card-title">{{ p.title }}</h4>
+                                <span class="tag"
+                                    style="background: rgba(108, 99, 255, 0.1); color: var(--primary-color); padding: 0.25rem 0.7rem; border-radius: 20px; font-size: 0.7rem;">
+                                    {{ p.category }}
+                                </span>
+                            </div>
+                        </div>
+
+                        {% if p.client_name %}
+                        <div class="portfolio-card-detail">
+                            <span class="detail-label">Client:</span>
+                            <span class="detail-value">{{ p.client_name }}</span>
+                        </div>
+                        {% endif %}
+
+                        {% if p.external_link %}
+                        <div class="portfolio-card-detail">
+                            <span class="detail-label">Link:</span>
+                            <a href="{{ p.external_link }}" target="_blank" class="detail-value"
+                                style="color: var(--primary-color); text-decoration: none;">
+                                <i class="fas fa-external-link-alt"></i> View Project
+                            </a>
+                        </div>
+                        {% endif %}
+
+                        <div class="portfolio-card-actions">
+                            <button class="btn-small portfolio-edit-trigger" data-id="{{ p.id }}"
+                                data-title="{{ p.title }}" data-cat="{{ p.category }}"
+                                data-link="{{ p.external_link or '' }}" data-client="{{ p.client_name or '' }}"
+                                style="flex: 1; background: rgba(3, 218, 198, 0.1); color: var(--secondary-color); border: 1px solid var(--secondary-color);">
+                                <i class="fas fa-edit"></i> Edit
+                            </button>
+                            <a href="{{ url_for('delete_portfolio', item_id=p.id) }}"
+                                onclick="return confirm('Delete this portfolio item?')" class="btn-small"
+                                style="flex: 1; background: rgba(255, 99, 132, 0.1); color: #ff6384; border: 1px solid #ff6384; text-align: center;">
+                                <i class="fas fa-trash-alt"></i> Delete
+                            </a>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+
+        <!-- Tab: Support Tickets (Admin) -->
+        <div id="tab-tickets" class="tab-content">
+            <div class="card">
+                <h3>Client Service Tickets</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>S.No</th>
+                            <th>Ticket ID</th>
+                            <th>Order ID</th>
+                            <th>User</th>
+                            <th>Subject</th>
+                            <th>Priority</th>
+                            <th>Status</th>
+                            <th>Response</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for t in tickets %}
+                        <tr>
+                            <td>{{ loop.index }}</td>
+                            <td class="highlight">#{{ t.custom_ticket_id or t.id }}</td>
+                            <td>{{ t.order.custom_order_id if t.order else 'N/A' }}</td>
+                            <td>{{ t.user.username }}<br><small class="text-muted">{{ t.user.custom_user_id }}</small>
+                            </td>
+                            <td><strong>{{ t.subject }}</strong></td>
+                            <td><span class="mini-badge priority-{{ t.priority }}">{{ t.priority }}</span></td>
+                            <td><span class="status-badge status-{{ t.status }}">{{ t.status }}</span></td>
+                            <td>
+                                <form method="POST" style="display:flex; gap:0.5rem;">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <input type="hidden" name="reply_ticket" value="1">
+                                    <input type="hidden" name="ticket_id" value="{{ t.id }}">
+                                    <input type="text" name="reply" placeholder="Short reply..." required
+                                        style="padding:4px; border-radius:4px; background:#111; border:1px solid #333; color:#fff;">
+                                    <button type="submit" class="btn-small">Resolve</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Profile Requests Subsection (Merged) -->
+            <div class="card" style="margin-top: 2rem;">
+                <h3>User Profile Change Requests</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>User</th>
+                            <th>Requested Name</th>
+                            <th>Requested Phone</th>
+                            <th>Reason</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for r in profile_requests %}
+                        <tr>
+                            <td>{{ r.user.username }}<br><small>{{ r.user.email }}</small></td>
+                            <td>{{ r.new_username }}</td>
+                            <td>{{ r.new_phone }}</td>
+                            <td>{{ r.description }}</td>
+                            <td><span class="mini-badge status-{{ r.status|lower }}">{{ r.status }}</span></td>
+                            <td>
+                                {% if r.status == 'Pending' %}
+                                <a href="{{ url_for('handle_profile_request', rid=r.id, action='approve') }}"
+                                    class="btn-small btn-primary">Approve</a>
+                                <a href="{{ url_for('handle_profile_request', rid=r.id, action='reject') }}"
+                                    class="btn-small btn-danger">Reject</a>
+                                {% else %}
+                                —
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Tab: Newsletter -->
+        <div id="tab-newsletter" class="tab-content">
+            <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 2rem;">
+                <div class="card">
+                    <h4>Select Recipients</h4>
+                    <div style="max-height: 400px; overflow-y: auto; margin-top: 1rem;">
+                        <div
+                            style="padding: 0.5rem; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; gap: 10px;">
+                            <input type="checkbox" id="selectAllRecipients" onchange="toggleSelectAll(this)">
+                            <strong>Select All Users</strong>
+                        </div>
+                        {% for u in users %}
+                        <div
+                            style="padding: 0.5rem; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid rgba(255,255,255,0.02);">
+                            <input type="checkbox" name="recipients" value="{{ u.email }}" class="recipient-checkbox">
+                            <div>
+                                <div style="font-size: 0.85rem;">{{ u.username }}</div>
+                                <div style="font-size: 0.7rem; color: var(--text-muted);">{{ u.email }}</div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h4>Compose Newsletter / Alert</h4>
+                    <form action="/admin/newsletter/action" method="POST" id="newsletterForm">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <div id="recipientsContainer"></div>
+
+                        <div class="form-group" style="margin-top:1rem;">
+                            <label>Email Subject</label>
+                            <input type="text" name="subject" id="newsSubject" required
+                                placeholder="e.g. Important Update Regarding Your Projects">
+                        </div>
+
+                        <div class="form-group">
+                            <label>Message Body (HTML supported)</label>
+                            <textarea name="body" id="newsBody" rows="8" required
+                                placeholder="Hello, we are excited to announce..."></textarea>
+                        </div>
+
+                        <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+                            <button type="button" class="btn-small" onclick="previewNewsletter()"
+                                style="background: var(--secondary-color); color: #000;">
+                                <i class="fas fa-eye"></i> Preview Email
+                            </button>
+                            <button type="submit" name="action" value="send_now" class="btn-small btn-primary"
+                                onclick="prepareRecipients()">
+                                <i class="fas fa-paper-plane"></i> Send Now
+                            </button>
+                        </div>
+
+                        <div style="margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--border-color);">
+                            <h5>Schedule for Later</h5>
+                            <div style="display: flex; gap: 1rem; align-items: center; margin-top: 0.5rem;">
+                                <input type="datetime-local" name="schedule_time"
+                                    style="padding: 6px; background: #000; border: 1px solid #444; color: #fff; border-radius: 4px;">
+                                <button type="submit" name="action" value="schedule" class="btn-small"
+                                    onclick="prepareRecipients()"
+                                    style="background: rgba(255,255,255,0.1); color: #fff; border: 1px solid #444;">
+                                    Schedule
+                                </button>
+                            </div>
+                            <small class="text-muted" style="font-size: 0.7rem;">Timezone: IST (Asia/Kolkata)</small>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div class="card">
+                <h4>Email History & Queue</h4>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Subject</th>
+                            <th>Recipients</th>
+                            <th>Scheduled Time (IST)</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for mail in scheduled_emails %}
+                        <tr>
+                            <td>{{ mail.subject }}</td>
+                            <td>
+                                <span title="{{ mail.recipients }}">{{ mail.recipients[:50] }}...</span>
+                            </td>
+                            <td>{{ mail.scheduled_time.strftime('%Y-%m-%d %H:%M') if mail.scheduled_time else 'N/A
+                                (Immediate)' }}</td>
+                            <td>
+                                <span class="mini-badge status-{{ mail.status|lower }}">
+                                    {{ mail.status }}
+                                </span>
+                            </td>
+                            <td>
+                                <a href="/admin/newsletter/delete/{{ mail.id }}" style="color: #ff6384;"><i
+                                        class="fas fa-trash"></i></a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Newsletter Preview Modal -->
+        <div id="newsletterPreviewOverlay" class="edit-form-overlay">
+            <div class="card" style="width: 800px; max-height: 90vh; overflow-y: auto; background: #fff; color: #000;">
+                <div
+                    style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid #eee; padding-bottom: 0.5rem;">
+                    <h3 style="color: #000; margin: 0;">Email Preview</h3>
+                    <button class="btn-small"
+                        onclick="document.getElementById('newsletterPreviewOverlay').style.display='none'"
+                        style="background: #eee; color: #000; border: none;">Close</button>
+                </div>
+                <div id="previewContent"></div>
+            </div>
+        </div>
+
+
+        <div id="tab-logs" class="tab-content">
+            <div class="card">
+                <h3>System Audit Records</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Timestamp</th>
+                            <th>Initiator</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for log in audit_logs %}
+                        <tr>
+                            <td class="text-muted">{{ log.timestamp.strftime('%Y-%m-%d %H:%M') }}</td>
+                            <td>{{ log.user.username if log.user else 'System' }}{% if log.user %}<br><small
+                                    class="text-muted">{{ log.user.custom_user_id }}</small>{% endif %}</td>
+                            <td>{{ log.action }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Tab: Profile Requests (Admin) -->
+
+
+        <!-- Tab: Jobs -->
+        <div id="tab-jobs" class="tab-content">
+            <div style="display: grid; grid-template-columns: 1.5fr 1fr; gap: 2rem;">
+                <div class="card">
+                    <h3>Post New Job</h3>
+                    <form action="/admin/jobs/action" method="POST" enctype="multipart/form-data" id="jobForm"
+                        class="form-professional">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="action_type" id="job_action_type" value="create">
+                        <input type="hidden" name="job_id" id="job_id">
+
+                        <div class="form-group">
+                            <label>Job Title</label>
+                            <input type="text" name="title" id="jobTitle" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Description (Rich Text Supported)</label>
+                            <textarea name="description" id="jobDesc" rows="8" required></textarea>
+                        </div>
+
+                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+                            <div class="form-group">
+                                <label>Categories</label>
+                                <div
+                                    style="display:grid; grid-template-columns: repeat(2, 1fr); gap: 5px; margin-top:5px;">
+                                    {% for cat in all_job_categories %}
+                                    <label class="checkbox-label"><input type="checkbox" name="categories"
+                                            value="{{ cat.name }}"> {{ cat.name }}</label>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>Eligible Years</label>
+                                <input type="text" name="eligible_years" id="jobYears" placeholder="e.g. 2023; 2024">
+                            </div>
+                        </div>
+
+                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+                            <div class="form-group">
+                                <label>Job Image / Logo</label>
+                                <input type="file" name="image" accept="image/*">
+                            </div>
+                            <div class="form-group">
+                                <label>External Apply Link</label>
+                                <input type="url" name="external_link" id="jobLink" required>
+                            </div>
+                        </div>
+
+                        <div style="display:flex; gap: 1rem; margin-top: 1rem;">
+                            <button type="submit" name="post_status" value="Post Now" class="btn btn-primary">Post
+                                Now</button>
+                            <button type="submit" name="post_status" value="Save as Draft"
+                                class="btn btn-secondary">Save as
+                                Draft</button>
+                            <div style="display:flex; align-items:center; gap: 10px;">
+                                <input type="datetime-local" name="schedule_time" class="form-control"
+                                    style="width:auto; background:#000; color:#fff; border:1px solid #444;">
+                                <button type="submit" name="post_status" value="Schedule"
+                                    class="btn-small">Schedule</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+
+            </div>
+
+            <div class="card" style="margin-top:2rem;">
+                <h3>Job History & Status</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Title</th>
+                            <th>Categories</th>
+                            <th>Status</th>
+                            <th>Shares</th>
+                            <th>Date</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for j in all_jobs %}
+                        <tr>
+                            <td>{{ j.title }}</td>
+                            <td>{{ j.categories }}</td>
+                            <td><span class="mini-badge status-{{ j.status|lower }}">{{ j.status }}</span></td>
+                            <td><i class="fas fa-share-alt"></i> {{ j.share_count }}</td>
+                            <td>{{ j.created_at.strftime('%d %b %Y') if j.created_at else 'New' }}</td>
+                            <td>
+                                <button class="btn-small" onclick="editJob(this)" data-id="{{ j.id }}"
+                                    data-title="{{ j.title }}" data-desc="{{ j.description }}"
+                                    data-cats="{{ j.categories }}" data-years="{{ j.eligible_years }}"
+                                    data-link="{{ j.external_link }}">Edit</button>
+                                <button class="btn-small btn-danger" onclick="deleteJob('{{ j.id }}')">Delete</button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        {% if current_user.role == 'Super Admin' %}
+        <!-- Tab: Permissions -->
+        <div id="tab-permissions" class="tab-content">
+            <div class="card">
+                <h3>Admin & Role Management</h3>
+                <p>Assign module-specific permissions to administrators.</p>
+
+                <!-- Promote User Section -->
+                <div
+                    style="background: rgba(108, 99, 255, 0.05); padding: 1.5rem; border-radius: 8px; margin-bottom: 2rem; border: 1px dashed var(--primary-color);">
+                    <h4 style="margin-bottom: 1rem;"><i class="fas fa-user-plus"></i> Promote User to Administrator</h4>
+                    <form action="/admin/roles/update" method="POST"
+                        style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: flex-end;">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <div class="form-group" style="flex: 1; min-width: 250px; margin-bottom: 0;">
+                            <label>Select Registered User</label>
+                            <select name="email" required
+                                style="width: 100%; padding: 10px; background: #111; border: 1px solid #333; color: #fff; border-radius: 4px;">
+                                <option value="" disabled selected>Choose a user...</option>
+                                {% for u in all_users if not u.is_admin and u.role == 'Client' %}
+                                <option value="{{ u.email }}">{{ u.username }} ({{ u.email }}) [{{ u.custom_user_id }}]
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="form-group" style="width: 150px; margin-bottom: 0;">
+                            <label>Assigned Role</label>
+                            <select name="role"
+                                style="width: 100%; padding: 10px; background: #111; border: 1px solid #333; color: #fff; border-radius: 4px;">
+                                <option value="Admin">Admin</option>
+                                <option value="Limited Admin">Limited Admin</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary" style="padding: 10px 20px;">Grant Admin
+                            Access</button>
+                    </form>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>User</th>
+                            <th>Current Role</th>
+                            <th>Permissions</th>
+                            <th>Update Access</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for u in all_users if u.is_admin or u.role != 'Client' %}
+                        <tr>
+                            <td>
+                                <strong>{{ u.username }}</strong>
+                                {% if u.email == current_user.email %}
+                                <span class="mini-badge" style="background: var(--primary-color);">You</span>
+                                {% endif %}<br>
+                                <small>{{ u.email }}</small>
+                            </td>
+                            <td>{{ u.role }}</td>
+                            <td>
+                                {% for p in json.loads(u.permissions or '[]') %}
+                                <span class="tag">{{ p }}</span>
+                                {% endfor %}
+                            </td>
+                            <td>
+                                <form action="/admin/roles/update" method="POST"
+                                    style="display:flex; gap: 0.5rem; align-items:center;">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <input type="hidden" name="email" value="{{ u.email }}">
+                                    {% if u.email == current_user.email %}
+                                    <div style="font-size: 0.75rem; color: #888; font-style: italic;">
+                                        <i class="fas fa-lock"></i> Self-modification disabled
+                                    </div>
+                                    {% else %}
+                                    <select name="role" style="font-size:0.8rem; padding:4px;">
+                                        <option value="Admin" {{ 'selected' if u.role=='Admin' }}>Admin</option>
+                                        <option value="Limited Admin" {{ 'selected' if u.role=='Limited Admin' }}>
+                                            Limited
+                                            Admin</option>
+                                        <option value="Client" {{ 'selected' if u.role=='Client' }}>Revoke Admin
+                                        </option>
+                                    </select>
+                                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:5px; margin: 0 10px;">
+                                        <label style="font-size:0.7rem; display:flex; align-items:center; gap:4px;">
+                                            <input type="checkbox" name="permissions" value="jobs" {{ 'checked'
+                                                if 'jobs' in (u.permissions or '' ) }}> Jobs
+                                        </label>
+                                        <label style="font-size:0.7rem; display:flex; align-items:center; gap:4px;">
+                                            <input type="checkbox" name="permissions" value="newsletters" {{ 'checked'
+                                                if 'newsletters' in (u.permissions or '' ) }}> Alerts
+                                        </label>
+                                        <label style="font-size:0.7rem; display:flex; align-items:center; gap:4px;">
+                                            <input type="checkbox" name="permissions" value="chatbot" {{ 'checked'
+                                                if 'chatbot' in (u.permissions or '' ) }}> AI Chat
+                                        </label>
+                                        <label style="font-size:0.7rem; display:flex; align-items:center; gap:4px;">
+                                            <input type="checkbox" name="permissions" value="users" {{ 'checked'
+                                                if 'users' in (u.permissions or '' ) }}> Users
+                                        </label>
+                                    </div>
+                                    <button type="submit" class="btn-small btn-primary">Save Changes</button>
+                                    {% endif %}
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Edit User Modal -->
+        <div id="editUserOverlay" class="edit-form-overlay">
+            <div class="card" style="background:#000;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+                    <h3>Edit User: <span id="display_user_id" style="color: var(--primary-color);"></span></h3>
+                    <button class="btn-small"
+                        onclick="document.getElementById('editUserOverlay').style.display='none'">X</button>
+                </div>
+                <form action="/admin/edit_user" method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="user_id" id="edit_user_id">
+                    <div class="form-group"><label>Name</label><input type="text" name="username" id="edit_user_name"
+                            required></div>
+                    <div class="form-group"><label>Email</label><input type="email" name="email" id="edit_user_email"
+                            required></div>
+                    <div class="form-group"><label>Phone</label><input type="text" name="phone" id="edit_user_phone">
+                    </div>
+                    <div class="form-group">
+                        <label>Status</label>
+                        <select name="status" id="edit_user_status">
+                            <option value="active">Active</option>
+                            <option value="inactive">Inactive</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary full-width" style="margin-top:1rem;">Save
+                        Changes</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- User Details Modal -->
+        <div id="userDetailsOverlay" class="edit-form-overlay">
+            <div class="card" style="background:#000; position: relative;">
+                <div
+                    style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem; border-bottom: 2px solid var(--primary-color); padding-bottom: 1rem;">
+                    <div style="display:flex; align-items:center;">
+                        <h3 style="margin: 0;"><i class="fas fa-user-circle"
+                                style="color: var(--primary-color); margin-right: 10px;"></i>User Details</h3>
+                        <button class="btn-small" onclick="openEditFromDetails()" title="Edit User"
+                            style="margin-left: 15px; background: rgba(255, 255, 255, 0.1); border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;">
+                            <i class="fas fa-pencil-alt" style="font-size: 0.9rem;"></i>
+                        </button>
+                    </div>
+                    <button class="btn-small"
+                        onclick="document.getElementById('userDetailsOverlay').style.display='none'">✕</button>
+                </div>
+
+                <!-- Navigation Arrows -->
+                <button onclick="navigateUserProfile(-1)"
+                    style="position: absolute; left: -15px; top: 50%; transform: translateY(-50%); background: var(--primary-color); color: #000; border: none; border-radius: 50%; width: 40px; height: 40px; cursor: pointer; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 8px rgba(0,0,0,0.3);"
+                    title="Previous User">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+
+                <button onclick="navigateUserProfile(1)"
+                    style="position: absolute; right: -15px; top: 50%; transform: translateY(-50%); background: var(--primary-color); color: #000; border: none; border-radius: 50%; width: 40px; height: 40px; cursor: pointer; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 8px rgba(0,0,0,0.3);"
+                    title="Next User">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+
+                <div style="display: grid; gap: 1rem;">
+                    <div style="display: grid; grid-template-columns: 120px 1fr; gap: 0.5rem; align-items: center;">
+                        <strong style="color: var(--text-muted);">User ID:</strong>
+                        <span id="detail_user_id" style="color: var(--primary-color); font-weight: 600;"></span>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 120px 1fr; gap: 0.5rem; align-items: center;">
+                        <strong style="color: var(--text-muted);">Full Name:</strong>
+                        <span id="detail_username"></span>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 120px 1fr; gap: 0.5rem; align-items: center;">
+                        <strong style="color: var(--text-muted);">Email:</strong>
+                        <span id="detail_email" style="word-break: break-all;"></span>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 120px 1fr; gap: 0.5rem; align-items: center;">
+                        <strong style="color: var(--text-muted);">Phone:</strong>
+                        <span id="detail_phone"></span>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 120px 1fr; gap: 0.5rem; align-items: center;">
+                        <strong style="color: var(--text-muted);">Role:</strong>
+                        <span id="detail_role" class="mini-badge"
+                            style="background: var(--primary-color); color: #000;"></span>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 120px 1fr; gap: 0.5rem; align-items: center;">
+                        <strong style="color: var(--text-muted);">Total Orders:</strong>
+                        <span id="detail_orders"
+                            style="font-size: 1.2rem; font-weight: 600; color: var(--secondary-color);"></span>
+                    </div>
+                    <div style="text-align: center; color: var(--text-muted); font-size: 0.85rem; margin-top: 0.5rem;">
+                        <span id="user_position"></span>
+                    </div>
+                </div>
+                <button class="btn btn-primary full-width" style="margin-top: 2rem;"
+                    onclick="document.getElementById('userDetailsOverlay').style.display='none'">OK</button>
+            </div>
+        </div>
+
+        <!-- Portfolio Modal -->
+        <div id="portfolioModal" class="edit-form-overlay">
+            <div class="card" style="background:#000;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+                    <h3 id="pModalTitle">Add Portfolio Item</h3>
+                    <button class="btn-small"
+                        onclick="document.getElementById('portfolioModal').style.display='none'">X</button>
+                </div>
+                <form action="/admin/portfolio/manage" method="POST" enctype="multipart/form-data">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="action" id="p_action" value="add">
+                    <input type="hidden" name="id" id="p_id">
+
+                    <div class="form-group">
+                        <label>Project Title</label>
+                        <input type="text" name="title" id="p_title" required class="form-control">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Client Name</label>
+                        <input type="text" name="client_name" id="p_client" class="form-control">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Category</label>
+                        <select name="category" id="p_category" required class="form-control">
+                            <option value="web">Web Design</option>
+                            <option value="logo">Logo Design</option>
+                            <option value="video">Video Editing</option>
+                            <option value="thumbnails">Thumbnails</option>
+                            <option value="ads">Posters & Ads</option>
+                            <option value="wedding">Wedding Invitations</option>
+                            <option value="seo">SEO Services</option>
+                            <option value="marketing">Social Media Marketing</option>
+                            <option value="others">Others</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>External Link (Optional)</label>
+                        <input type="text" name="external_link" id="p_link" class="form-control">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Project Image</label>
+                        <input type="file" name="image" id="p_image" class="form-control">
+                        <small class="text-muted">Upload high quality image.</small>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary full-width" style="margin-top:1rem;">Save Item</button>
+                </form>
+            </div>
+        </div>
+        {% else %}
+        <div class="admin-nav">
+            {% if must_update_profile %}
+            <span class="tab-link disabled" style="opacity: 0.5; cursor: not-allowed;"><i class="fas fa-lock"></i>
+                Project Pipeline (Update Profile First)</span>
+            <span class="tab-link active" onclick="openTab(event, 'tab-profile')"><i class="fas fa-user-circle"></i> My
+                Profile</span>
+            {% else %}
+            <span class="tab-link active" onclick="openTab(event, 'tab-pipeline')"><i
+                    class="fas fa-project-diagram"></i>
+                Project Pipeline</span>
+            <span class="tab-link" onclick="openTab(event, 'tab-profile')"><i class="fas fa-user-circle"></i> My
+                Profile</span>
+            {% endif %}
+        </div>
+
+        <div id="tab-pipeline" class="tab-content {{ 'active' if not must_update_profile else '' }}">
+            <div class="card">
+                <h3>Active Service Pipeline</h3>
+                {% if orders %}
+                <table>
+                    <thead>
+                        <tr>
+                            <th>S.No</th>
+                            <th>Project ID</th>
+                            <th>Service Type</th>
+                            <th>Status</th>
+                            <th>Timeline</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for order in orders %}
+                        <tr id="order-{{ order.id }}">
+                            <td>{{ loop.index }}</td>
+                            <td class="highlight" style="font-weight: 600;">{{ order.custom_order_id }}</td>
+                            <td>{{ order.service_name }}</td>
+                            <td><span class="status-badge status-{{ order.status.replace(' ', '-') }}">{{ order.status
+                                    }}</span></td>
+                            <td>
+                                <div class="timeline-box">
+                                    {% for event in order.timeline %}
+                                    <div class="timeline-item">
+                                        <strong>{{ event.timestamp.strftime('%m-%d') }}:</strong> {{ event.note }}
+                                        {% if event.file_url %}
+                                        <div style="margin-top:5px;">
+                                            <a href="{{ url_for('static', filename=event.file_url) }}" target="_blank"
+                                                style="color:var(--primary-color);">View Attachment</a>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}<p class="text-muted">No active projects.</p>{% endif %}
+            </div>
+
+            <div class="card" id="new-request">
+                <h3>Initiate Request</h3>
+                <form method="POST" class="form-professional">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="request_service" value="1">
+                    <div class="form-group">
+                        <label>Select Service</label>
+                        <select name="service_id" required>
+                            {% for s in services %}<option value="{{ s.id }}">{{ s.title }}</option>{% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Project Scope</label>
+                        <textarea name="details" rows="6" required></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Submit Request</button>
+                </form>
+            </div>
+        </div>
+
+        <div id="tab-profile" class="tab-content {{ 'active' if must_update_profile else '' }}">
+            <div class="card">
+                <h3>Manage Account Information</h3>
+                <p>Track and update your profile details.</p>
+                <form action="{{ url_for('update_profile') }}" method="POST" class="form-professional"
+                    style="margin-top: 2rem;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+                        <div class="form-group">
+                            <label>Display Name</label>
+                            <input type="text" name="username" value="{{ current_user.username }}" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Phone Number</label>
+                            <input type="text" name="phone" value="{{ current_user.phone_number or '' }}" required
+                                pattern="^\+?[0-9]{7,15}$" title="Only numbers and + allowed, 7-15 digits"
+                                oninput="this.value = this.value.replace(/[^0-9+]/g, '')">
+                        </div>
+                    </div>
+
+                    {% if current_user.profile_edited_count > 0 %}
+                    <div class="form-group" style="margin-top: 1rem;">
+                        <label>Reason for Modification (Admin Approval Required)</label>
+                        <textarea name="description" rows="3"
+                            placeholder="Explain why you need to update your info again..."></textarea>
+                        <small class="text-muted">Since you've already updated your profile once, further changes
+                            require
+                            verification.</small>
+                    </div>
+                    {% endif %}
+
+                    <button type="submit" class="btn btn-primary" style="margin-top: 1rem;">
+                        {{ 'Update Profile' if current_user.profile_edited_count == 0 else 'Submit Change Request' }}
+                    </button>
+                </form>
+            </div>
+
+            <div class="card">
+                <h4>Modification History</h4>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Request</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for r in profile_requests %}
+                        <tr>
+                            <td>{{ r.created_at.strftime('%Y-%m-%d') }}</td>
+                            <td>Name: {{ r.new_username }}<br>Phone: {{ r.new_phone }}</td>
+                            <td><span class="mini-badge status-{{ r.status|lower }}">{{ r.status }}</span></td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="3" class="text-muted">No modification requests yet.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    </div>
+
+    <script>
+        window.onload = function () {
+            const mustUpdate = document.body.getAttribute('data-must-update') === 'true';
+            if (mustUpdate) {
+                alert("Welcome! Please provide your phone number to complete your profile registration.");
+                if (window.openTab) {
+                    window.openTab(null, 'tab-profile');
+                }
+            }
+        };
+
+        function handleNotifClick(el) {
+            const nid = el.getAttribute('data-id');
+            const link = el.getAttribute('data-link');
+            fetch(`/notifications/read/${nid}`)
+                .then(r => r.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        el.classList.remove('unread');
+                        const badge = document.querySelector('.notif-badge');
+                        if (badge) {
+                            let count = parseInt(badge.innerText) - 1;
+                            if (count <= 0) badge.remove();
+                            else badge.innerText = count;
+                        }
+                    }
+                    if (link && link !== '#' && link !== 'None') {
+                        window.location.href = link;
+                    }
+                })
+                .catch(err => {
+                    console.error('Error marking notification as read:', err);
+                    if (link && link !== '#' && link !== 'None') {
+                        window.location.href = link;
+                    }
+                });
+        }
+
+        function toggleEditUser(id, name, email, phone, active, customId) {
+            document.getElementById('edit_user_id').value = id;
+            document.getElementById('edit_user_name').value = name;
+            document.getElementById('edit_user_email').value = email;
+            document.getElementById('edit_user_phone').value = phone;
+            document.getElementById('edit_user_status').value = active ? 'active' : 'inactive';
+            document.getElementById('display_user_id').innerText = customId || '';
+            document.getElementById('editUserOverlay').style.display = 'flex';
+        }
+
+        const notifBell = document.getElementById('notifBell');
+        const notifDropdown = document.getElementById('notifDropdown');
+        if (notifBell) {
+            notifBell.onclick = (e) => {
+                e.stopPropagation();
+                notifDropdown.classList.toggle('active');
+            };
+        }
+        document.onclick = () => notifDropdown && notifDropdown.classList.remove('active');
+
+        function openPortfolioModal(mode, id, title, cat, link, client) {
+            console.log('openPortfolioModal called with mode:', mode);
+
+            const modal = document.getElementById('portfolioModal');
+            if (!modal) {
+                console.error('Portfolio modal not found!');
+                return;
+            }
+
+            document.getElementById('p_action').value = mode;
+            document.getElementById('pModalTitle').innerText = mode === 'add' ? 'Add Portfolio Item' : 'Edit Portfolio Item';
+
+            if (mode === 'edit') {
+                document.getElementById('p_id').value = id;
+                document.getElementById('p_title').value = title;
+                document.getElementById('p_client').value = client || '';
+                document.getElementById('p_category').value = cat;
+                document.getElementById('p_link').value = link;
+            } else {
+                document.getElementById('p_id').value = '';
+                document.getElementById('p_title').value = '';
+                document.getElementById('p_client').value = '';
+                document.getElementById('p_link').value = '';
+            }
+            modal.style.display = 'flex';
+            console.log('Modal display set to flex');
+        }
+
+        function toggleSelectAll(master) {
+            const checkboxes = document.querySelectorAll('.recipient-checkbox');
+            checkboxes.forEach(cb => cb.checked = master.checked);
+        }
+
+        function prepareRecipients() {
+            const container = document.getElementById('recipientsContainer');
+            container.innerHTML = '';
+            const selected = document.querySelectorAll('.recipient-checkbox:checked');
+            selected.forEach(cb => {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'recipients';
+                input.value = cb.value;
+                container.appendChild(input);
+            });
+        }
+
+        // Use event delegation for portfolio edit buttons (works for both table and card views)
+        document.addEventListener('click', function (e) {
+            if (e.target.closest('.portfolio-edit-trigger')) {
+                const btn = e.target.closest('.portfolio-edit-trigger');
+                console.log('Portfolio edit button clicked:', btn.dataset);
+                openPortfolioModal('edit', btn.dataset.id, btn.dataset.title, btn.dataset.cat, btn.dataset.link, btn.dataset.client);
+            }
+        });
+
+        // Use event delegation for user edit buttons
+        document.addEventListener('click', function (e) {
+            if (e.target.closest('.user-edit-trigger')) {
+                const btn = e.target.closest('.user-edit-trigger');
+                console.log('User edit button clicked:', btn.dataset);
+                toggleEditUser(btn.dataset.id, btn.dataset.username, btn.dataset.email, btn.dataset.phone, btn.dataset.active === 'true', btn.dataset.customid);
+            }
+        });
+
+        // Handle delete button clicks with confirmation
+        document.addEventListener('click', function (e) {
+            const deleteLink = e.target.closest('a[href*="delete_portfolio"]');
+            if (deleteLink) {
+                console.log('Delete button clicked');
+                // Let the onclick confirmation handle it, but ensure it's clickable
+                // The onclick="return confirm(...)" will handle the confirmation
+            }
+        });
+
+        document.querySelectorAll('.output-field').forEach(el => {
+            const id = el.id.split('_').pop();
+            const select = document.querySelector(`select[data-id="${id}"]`);
+            if (select && select.value === 'Completed') el.style.display = 'block';
+        });
+
+
+        function editJob(btn) {
+            const d = btn.dataset;
+            document.getElementById('job_id').value = d.id;
+            document.getElementById('job_action_type').value = 'edit';
+            document.getElementById('jobTitle').value = d.title;
+            document.getElementById('jobDesc').value = d.desc;
+            document.getElementById('jobYears').value = d.years;
+            document.getElementById('jobLink').value = d.link;
+            const cats = d.cats.split(';');
+            document.querySelectorAll('input[name="categories"]').forEach(cb => { cb.checked = cats.includes(cb.value); });
+            document.getElementById('jobForm').scrollIntoView({ behavior: 'smooth' });
+            document.querySelector('#jobForm h3').innerText = 'Edit Job: ' + d.title;
+        }
+
+        function deleteJob(id) {
+            if (confirm('Are you sure you want to delete this job?')) {
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = '/admin/jobs/action';
+                form.innerHTML = `<input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="action_type" value="delete"><input type="hidden" name="job_id" value="${id}">`;
+                document.body.appendChild(form);
+                form.submit();
+            }
+        }
+
+        let allUsers = [];
+        let currentUserIndex = 0;
+
+        {% if current_user.is_admin and users %}
+        allUsers = [
+            {% for u in users %}
+        {
+            id: {{ u.id | tojson }},
+            userId: {{ u.custom_user_id | tojson }},
+            username: {{ u.username | tojson }},
+            email: {{ u.email | tojson }},
+            phone: {{ (u.phone_number or "N/A") | tojson }},
+            role: {{ u.role | tojson }},
+
+            isActive: {{ u.is_active_status | tojson }},
+            orderCount: {{ u.orders | length }}
+        } {{ ',' if not loop.last else '' }}
+        {% endfor %}
+        ];
+        {% endif %}
+
+        function showUserDetails(userId, username, email, phone, role, orderCount) {
+            console.log('showUserDetails called with userId:', userId);
+            console.log('allUsers array:', allUsers);
+
+            currentUserIndex = allUsers.findIndex(u => u.userId === userId);
+            console.log('Found user at index:', currentUserIndex);
+
+            if (currentUserIndex === -1) {
+                currentUserIndex = 0;
+                allUsers = [{ userId, username, email, phone, role, orderCount }];
+                console.log('User not found in array, created new entry');
+            }
+            displayUserDetails(currentUserIndex);
+
+            const overlay = document.getElementById('userDetailsOverlay');
+            if (!overlay) {
+                console.error('User details overlay not found!');
+                return;
+            }
+            overlay.style.display = 'flex';
+            console.log('User details overlay displayed');
+        }
+
+        function displayUserDetails(index) {
+            if (allUsers.length === 0) return;
+            const user = allUsers[index];
+            document.getElementById('detail_user_id').innerText = user.userId;
+            document.getElementById('detail_username').innerText = user.username;
+            document.getElementById('detail_email').innerText = user.email;
+            document.getElementById('detail_phone').innerText = user.phone;
+            document.getElementById('detail_role').innerText = user.role;
+            document.getElementById('detail_orders').innerText = user.orderCount;
+            const positionText = `User ${index + 1} of ${allUsers.length}`;
+            document.getElementById('user_position').innerText = positionText;
+        }
+
+        function navigateUserProfile(direction) {
+            if (allUsers.length === 0) return;
+            currentUserIndex += direction;
+            if (currentUserIndex < 0) {
+                currentUserIndex = allUsers.length - 1;
+            } else if (currentUserIndex >= allUsers.length) {
+                currentUserIndex = 0;
+            }
+            displayUserDetails(currentUserIndex);
+        }
+
+        function openEditFromDetails() {
+            if (allUsers.length === 0) return;
+            const user = allUsers[currentUserIndex];
+            document.getElementById('userDetailsOverlay').style.display = 'none';
+            toggleEditUser(
+                user.id,
+                user.username,
+                user.email,
+                user.phone === 'N/A' ? '' : user.phone,
+                user.isActive,
+                user.userId
+            );
+        }
+    </script>
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+
+</html>

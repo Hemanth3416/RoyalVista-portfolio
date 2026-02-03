@@ -1,0 +1,23 @@
+{% set fields = [
+('hero_title', 'Hero Main Title'),
+('hero_subtitle', 'Hero Subtitle'),
+('about_title', 'About Section Title'),
+('about_text', 'About Description'),
+('contact_heading', 'Contact Section Heading')
+] %}
+
+{% for key, label in fields %}
+<form method="POST" class="cms-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="update_content" value="1">
+    <input type="hidden" name="key" value="{{ key }}">
+    <div class="form-group">
+        <label>{{ label }}</label>
+        <textarea name="value" rows="3"
+            style="width: 100%; padding: 10px; background: #000; border: 1px solid #333; color: #fff; border-radius: 8px;">{{ content.get(key, '') }}</textarea>
+    </div>
+    <button type="submit" class="btn-small"
+        style="background: var(--primary-color); border: none; padding: 8px 16px; border-radius: 6px; color: #fff; cursor: pointer; margin-top: 10px;">Update
+        Field</button>
+</form>
+{% endfor %}
