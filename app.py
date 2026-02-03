@@ -207,6 +207,10 @@ def load_user(user_id):
 
 def init_db():
     with app.app_context():
+        # Ensure instance folder exists
+        if not os.path.exists('instance'):
+            os.makedirs('instance')
+        
         # Using a safer approach for schema updates
         db.create_all()
         
