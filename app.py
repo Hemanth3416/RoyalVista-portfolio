@@ -281,48 +281,51 @@ def init_db():
             ])
         db.session.commit()
         
-        # --- Auto-Restore Logic ---
-        # If the local DB has no portfolio items or jobs, try to restore from cloud
-        try:
-            from models import PortfolioItem, Job
-            if PortfolioItem.query.first() is None and Job.query.first() is None:
-                print("Database empty. Attempting auto-restore from Google Sheets...")
-                from utils import fetch_from_google_sheets
-                
-                # Restore Portfolio
-                p_data = fetch_from_google_sheets('Portfolio')
-                for p in p_data:
-                    title = str(p.get('Title', '')).strip()
-                    if title:
-                        new_p = PortfolioItem(
-                            title=title,
-                            client_name=str(p.get('Client', '')),
-                            category=str(p.get('Category', 'Others')),
-                            image_url=str(p.get('Image URL', '')),
-                            active=True
-                        )
-                        db.session.add(new_p)
-                
-                # Restore Jobs
-                j_data = fetch_from_google_sheets('Job')
-                for j in j_data:
-                    title = str(j.get('Title', '')).strip()
-                    if title:
-                        new_j = Job(
-                            title=title,
-                            description="Restored from cloud...",
-                            categories=str(j.get('Categories', '')),
-                            eligible_years=str(j.get('Eligible Years', '')),
-                            status=str(j.get('Status', 'Posted')),
-                            share_count=int(j.get('Share Count', 0)) if str(j.get('Share Count')).isdigit() else 0
-                        )
-                        db.session.add(new_j)
-                
-                db.session.commit()
-                print("Auto-restore complete.")
-        except Exception as e:
-            print(f"Auto-restore failed: {e}")
-            db.session.rollback()
+        # --- Auto-Restore Logic (Threaded to prevent boot timeout) ---
+        def background_restore(app_obj):
+            with app_obj.app_context():
+                try:
+                    from models import PortfolioItem, Job
+                    if PortfolioItem.query.first() is None and Job.query.first() is None:
+                        print("Database empty. Attempting auto-restore from Google Sheets in background...")
+                        from utils import fetch_from_google_sheets
+                        
+                        # Restore Portfolio
+                        p_data = fetch_from_google_sheets('Portfolio')
+                        for p in p_data:
+                            title = str(p.get('Title', '')).strip()
+                            if title:
+                                new_p = PortfolioItem(
+                                    title=title,
+                                    client_name=str(p.get('Client', '')),
+                                    category=str(p.get('Category', 'Others')),
+                                    image_url=str(p.get('Image URL', '')),
+                                    active=True
+                                )
+                                db.session.add(new_p)
+                        
+                        # Restore Jobs
+                        j_data = fetch_from_google_sheets('Job')
+                        for j in j_data:
+                            title = str(j.get('Title', '')).strip()
+                            if title:
+                                new_j = Job(
+                                    title=title,
+                                    description="Restored from cloud...",
+                                    categories=str(j.get('Categories', '')),
+                                    eligible_years=str(j.get('Eligible Years', '')),
+                                    status=str(j.get('Status', 'Posted')),
+                                    share_count=int(j.get('Share Count', 0)) if str(j.get('Share Count')).isdigit() else 0
+                                )
+                                db.session.add(new_j)
+                        
+                        db.session.commit()
+                        print("Background Auto-restore complete.")
+                except Exception as e:
+                    print(f"Background Auto-restore failed: {e}")
+                    db.session.rollback()
+
+        threading.Thread(target=background_restore, args=(app,)).start()
 
 # --- Decorators & Helpers ---
 from functools import wraps
@@ -731,13 +734,18 @@ def dashboard():
                     file_path = os.path.join(app.root_path, 'static/assets/portfolio', fname)
                     file.save(file_path)
                     
-                    # Apply Watermark
-                    apply_watermark(file_path)
+                    ext = fname.lower().split('.')[-1]
+                    is_img = ext in ['jpg', 'jpeg', 'png', 'webp', 'gif']
                     
-                    # Upload to ImgBB
-                    direct_link = upload_to_imgbb(file_path)
-                    if direct_link:
-                        image_url = direct_link
+                    if is_img:
+                        # Apply Watermark
+                        apply_watermark(file_path)
+                        # Upload to ImgBB
+                        direct_link = upload_to_imgbb(file_path)
+                        if direct_link:
+                            image_url = direct_link
+                        else:
+                            image_url = f'assets/portfolio/{fname}'
                     else:
                         image_url = f'assets/portfolio/{fname}'
                 
@@ -771,10 +779,13 @@ def dashboard():
                         elif ext in ['mp4']: file_type = 'video'
                         elif ext in ['pdf']: file_type = 'document'
                         
-                        # Upload to ImgBB
-                        direct_link = upload_to_imgbb(temp_path)
-                        if direct_link:
-                            file_url = direct_link
+                        # Upload to ImgBB only for images
+                        if file_type == 'image':
+                            direct_link = upload_to_imgbb(temp_path)
+                            if direct_link:
+                                file_url = direct_link
+                            else:
+                                file_url = f'assets/uploads/{fname}'
                         else:
                             file_url = f'assets/uploads/{fname}'
                         
@@ -1114,14 +1125,20 @@ def manage_portfolio():
         file_path = os.path.join(app.root_path, 'static/assets/portfolio', fname)
         file.save(file_path)
         
-        # Apply Watermark
-        apply_watermark(file_path)
+        # Apply Watermark only for images
+        ext = fname.lower().split('.')[-1]
+        is_image = ext in ['jpg', 'jpeg', 'png', 'webp']
         
-        # Upload to ImgBB
-        direct_link = upload_to_imgbb(file_path)
-        if direct_link:
-            image_url = direct_link
+        if is_image:
+            apply_watermark(file_path)
+            # Upload to ImgBB only for images
+            direct_link = upload_to_imgbb(file_path)
+            if direct_link:
+                image_url = direct_link
+            else:
+                image_url = f'assets/portfolio/{fname}'
         else:
+            # For videos/docs, just keep the local path (or handle separately)
             image_url = f'assets/portfolio/{fname}'
 
     if action == 'add':
@@ -1524,13 +1541,18 @@ def admin_job_action():
         file_path = os.path.join(app.root_path, 'static/assets/jobs', fname)
         file.save(file_path)
         
-        # Apply Watermark
-        apply_watermark(file_path)
+        ext = fname.lower().split('.')[-1]
+        is_img = ext in ['jpg', 'jpeg', 'png', 'webp', 'gif']
         
-        # Upload to ImgBB
-        direct_link = upload_to_imgbb(file_path)
-        if direct_link:
-            image_url = direct_link
+        if is_img:
+            # Apply Watermark
+            apply_watermark(file_path)
+            # Upload to ImgBB
+            direct_link = upload_to_imgbb(file_path)
+            if direct_link:
+                image_url = direct_link
+            else:
+                image_url = f'assets/jobs/{fname}'
         else:
             image_url = f'assets/jobs/{fname}'
 
