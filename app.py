@@ -136,10 +136,9 @@ def notify_job_subscribers(job):
             unsubscribe_link=url_for('job_subscribe', _external=True)
         )
 
-# Initialize Scheduler
+# Initialize Scheduler (Start it in maintenance thread to favor boot speed)
 scheduler = BackgroundScheduler(timezone=pytz.timezone('Asia/Kolkata'))
 scheduler.add_job(func=process_scheduled_tasks, trigger="interval", minutes=1)
-scheduler.start()
 
 def validate_inputs(*args):
     """Checks if any provided input is empty or whitespace only."""
@@ -209,135 +208,93 @@ def add_notification(user_id, title, message, link=None, template=None, email_su
 def load_user(user_id):
     return User.query.get(int(user_id))
 
+_maintenance_started = False
+
 def init_db():
+    global _maintenance_started
+    if _maintenance_started:
+        return
+    _maintenance_started = True
+
     with app.app_context():
-        # Ensure instance and upload folders exist
+        # Step 1: Immediate Folders (Essential)
         for folder in ['instance', 'static/assets/uploads', 'static/assets/portfolio', 'static/assets/jobs']:
-            full_path = os.path.join(app.root_path, folder)
-            if not os.path.exists(full_path):
-                os.makedirs(full_path)
+            os.makedirs(os.path.join(app.root_path, folder), exist_ok=True)
         
-        # Using a safer approach for schema updates
+        # Step 2: Immediate Schema (Essential)
         db.create_all()
-        
-        # Database Schema & Data Integrity Checks
-        try:
-            # Check existing columns to avoid redundant ALTER TABLE calls
-            existing_cols = [row[1] for row in db.session.execute(db.text("PRAGMA table_info(user)")).fetchall()]
-            for col, dtype in [
-                ("is_subscribed", "BOOLEAN DEFAULT 1"), 
-                ("created_at", "DATETIME"), 
-                ("permissions", "TEXT"), 
-                ("role", "VARCHAR(20) DEFAULT 'Client'"), 
-                ("is_active_status", "BOOLEAN DEFAULT 1"), 
-                ("profile_edited_count", "INTEGER DEFAULT 0"), 
-                ("custom_user_id", "VARCHAR(20)")
-            ]:
-                if col not in existing_cols:
-                    try:
-                        db.session.execute(db.text(f"ALTER TABLE user ADD COLUMN {col} {dtype}"))
-                        db.session.commit()
-                    except Exception:
-                        db.session.rollback()
 
-            # Batch update users without custom_user_id
-            users_to_update = db.session.execute(db.text("SELECT id FROM user WHERE custom_user_id IS NULL")).fetchall()
-            if users_to_update:
-                for row in users_to_update:
-                    new_id = gen_user_id()
-                    db.session.execute(db.text("UPDATE user SET custom_user_id = :cid WHERE id = :uid"), 
-                                       {'cid': new_id, 'uid': row[0]})
-                db.session.commit()
-        except Exception as e:
-            db.session.rollback()
-            print(f"Schema Update Error: {e}")
-        
-        if not User.query.filter_by(is_admin=True).first():
-            hashed_pw = bcrypt.generate_password_hash('RoyalVista@2026').decode('utf-8')
-            # Super Admin
-            admin = User(username='RoyalVista Admin', email='royalvistatechsolutions@gmail.com', password=hashed_pw, is_admin=True, role='Super Admin', permissions=json.dumps(['jobs', 'newsletters', 'chatbot', 'users']), phone_number="+1234567890")
-            db.session.add(admin)
-        
-        if not Service.query.first():
-            db.session.add_all([
-                Service(title='Web Design', description='Professional & responsive.', icon_class='fas fa-desktop'),
-                Service(title='Logo Design', description='Brand identity experts.', icon_class='fas fa-pen-nib'),
-                Service(title='Video Editing', description='High-quality cuts.', icon_class='fas fa-video'),
-                Service(title='Thumbnails', description='Click-worthy designs.', icon_class='fas fa-image'),
-                Service(title='Posters & Ads', description='Impactful visuals.', icon_class='fas fa-ad'),
-                Service(title='Wedding Invitations', description='Elegant & memorable designs.', icon_class='fas fa-heart'),
-                Service(title='SEO Services', description='Boost your online visibility.', icon_class='fas fa-search'),
-                Service(title='Social Media Marketing', description='Grow your brand presence.', icon_class='fas fa-share-alt'),
-                Service(title='Others', description='Custom services tailored to your needs.', icon_class='fas fa-ellipsis-h')
-            ])
-            
-        if not SiteContent.query.get('hero_title'):
-            db.session.add_all([
-                SiteContent(key='hero_title', value='RoyalVista Tech Solutions<br>Empowering Brands with <span class="highlight">Innovation</span>'),
-                SiteContent(key='hero_subtitle', value='Premium Web Design, Logo Identity, and Video Solutions.'),
-                SiteContent(key='about_title', value='About <span class="highlight">RoyalVista</span>'),
-                SiteContent(key='about_text', value='We are a dedicated team of digital creators specializing in building strong online identities for businesses and professionals globally.'),
-                SiteContent(key='contact_heading', value='Grow Your <span class="highlight">Digital Presence</span>')
-            ])
-
-        # Default Job Categories
-        from models import JobCategory
-        if not JobCategory.query.first():
-            db.session.add_all([
-                JobCategory(name='2024'),
-                JobCategory(name='2025'),
-                JobCategory(name='2026'),
-                JobCategory(name='Fresher'),
-                JobCategory(name='Experienced'),
-                JobCategory(name='Hackathons')
-            ])
-        db.session.commit()
-        
-        # --- Auto-Restore Logic (Threaded to prevent boot timeout) ---
-        def background_restore(app_obj):
+        # Step 3: Offload everything else to a background thread
+        def run_maintenance(app_obj):
             with app_obj.app_context():
                 try:
+                    # Generic check for columns (works for SQLite & Postgres)
+                    from sqlalchemy import inspect
+                    inspector = inspect(db.engine)
+                    columns = [c['name'] for c in inspector.get_columns('user')]
+                    
+                    for col, dtype in [
+                        ("is_subscribed", "BOOLEAN DEFAULT 1"), ("created_at", "DATETIME"), 
+                        ("permissions", "TEXT"), ("role", "VARCHAR(20) DEFAULT 'Client'"), 
+                        ("is_active_status", "BOOLEAN DEFAULT 1"), ("profile_edited_count", "INTEGER DEFAULT 0"), 
+                        ("custom_user_id", "VARCHAR(20)")
+                    ]:
+                        if col not in columns:
+                            try:
+                                db.session.execute(db.text(f"ALTER TABLE \"user\" ADD COLUMN {col} {dtype}"))
+                                db.session.commit()
+                            except: db.session.rollback()
+
+                    # Data Integrity & Seeding
+                    if not User.query.filter_by(is_admin=True).first():
+                        hashed_pw = bcrypt.generate_password_hash('RoyalVista@2026').decode('utf-8')
+                        db.session.add(User(username='RoyalVista Admin', email='royalvistatechsolutions@gmail.com', password=hashed_pw, is_admin=True, role='Super Admin', permissions=json.dumps(['jobs', 'newsletters', 'chatbot', 'users']), phone_number="+1234567890"))
+                    
+                    if not Service.query.first():
+                        db.session.add_all([
+                            Service(title='Web Design', description='Professional.', icon_class='fas fa-desktop'),
+                            Service(title='Logo Design', description='Expert.', icon_class='fas fa-pen-nib'),
+                            Service(title='Video Editing', description='High-quality.', icon_class='fas fa-video'),
+                            Service(title='Thumbnails', description='Effective.', icon_class='fas fa-image'),
+                            Service(title='Posters & Ads', description='Impactful.', icon_class='fas fa-ad'),
+                            Service(title='Wedding Invitations', description='Elegant.', icon_class='fas fa-heart'),
+                            Service(title='SEO Services', description='Visibility.', icon_class='fas fa-search'),
+                            Service(title='Social Media Marketing', description='Presence.', icon_class='fas fa-share-alt'),
+                            Service(title='Others', description='Custom.', icon_class='fas fa-ellipsis-h')
+                        ])
+                    
+                    if not JobCategory.query.first():
+                        from models import JobCategory
+                        db.session.add_all([JobCategory(name=n) for n in ['2024','2025','2026','Fresher','Experienced','Hackathons']])
+                    
+                    db.session.commit()
+
+                    # Auto-Restore from Cloud (Only if local is empty)
                     from models import PortfolioItem, Job
                     if PortfolioItem.query.first() is None and Job.query.first() is None:
-                        print("Database empty. Attempting auto-restore from Google Sheets in background...")
+                        print("Syncing with Google Sheets in background...")
                         from utils import fetch_from_google_sheets
-                        
                         # Restore Portfolio
                         p_data = fetch_from_google_sheets('Portfolio')
                         for p in p_data:
-                            title = str(p.get('Title', '')).strip()
-                            if title:
-                                new_p = PortfolioItem(
-                                    title=title,
-                                    client_name=str(p.get('Client', '')),
-                                    category=str(p.get('Category', 'Others')),
-                                    image_url=str(p.get('Image URL', '')),
-                                    active=True
-                                )
-                                db.session.add(new_p)
-                        
+                            if p.get('Title'): db.session.add(PortfolioItem(title=p.get('Title'), client_name=p.get('Client'), category=p.get('Category', 'Others'), image_url=p.get('Image URL'), active=True))
                         # Restore Jobs
                         j_data = fetch_from_google_sheets('Job')
                         for j in j_data:
-                            title = str(j.get('Title', '')).strip()
-                            if title:
-                                new_j = Job(
-                                    title=title,
-                                    description="Restored from cloud...",
-                                    categories=str(j.get('Categories', '')),
-                                    eligible_years=str(j.get('Eligible Years', '')),
-                                    status=str(j.get('Status', 'Posted')),
-                                    share_count=int(j.get('Share Count', 0)) if str(j.get('Share Count')).isdigit() else 0
-                                )
-                                db.session.add(new_j)
+                             if j.get('Title'): db.session.add(Job(title=j.get('Title'), description="Restored from cloud...", categories=j.get('Categories'), eligible_years=j.get('Eligible Years'), status=j.get('Status', 'Posted')))
                         
                         db.session.commit()
-                        print("Background Auto-restore complete.")
+                    
+                    # Start Scheduler now that DB is ready
+                    if not scheduler.running:
+                        scheduler.start()
+                        print("Background data sync complete.")
+
                 except Exception as e:
-                    print(f"Background Auto-restore failed: {e}")
+                    print(f"Maintenance failed: {e}")
                     db.session.rollback()
 
-        threading.Thread(target=background_restore, args=(app,)).start()
+        threading.Thread(target=run_maintenance, args=(app,), daemon=True).start()
 
 # --- Decorators & Helpers ---
 from functools import wraps
