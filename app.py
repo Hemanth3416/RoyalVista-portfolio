@@ -31,7 +31,7 @@ import requests
 # Google OAuth Config
 GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID')
 GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET')
-GOOGLE_REDIRECT_URI = os.environ.get('GOOGLE_REDIRECT_URI', 'https://royalvistatechsolutions.onrender.com/auth/google/callback')
+GOOGLE_REDIRECT_URI = os.environ.get('GOOGLE_REDIRECT_URI')
 GOOGLE_DISCOVERY_URL = "https://accounts.google.com/.well-known/openid-configuration"
 
 app = Flask(__name__)
@@ -459,16 +459,8 @@ from urllib.parse import urlparse
 
 @app.route("/login/google")
 def google_login():
-    # Ensure request comes from the same domain as the redirect_uri to avoid session cookie mismatch
-    redirect_uri = GOOGLE_REDIRECT_URI
-    if redirect_uri:
-        parsed_uri = urlparse(redirect_uri)
-        expected_host = parsed_uri.netloc
-        if request.host != expected_host:
-            # Reconstruct the URL with the correct host
-            new_url = f"{parsed_uri.scheme}://{expected_host}{url_for('google_login', mode=request.args.get('mode', 'login'))}"
-            print(f"DEBUG: Redirecting to correct domain: {new_url}")
-            return redirect(new_url)
+    # If redirect_uri is not set in environment, we use a dynamic fallback
+    redirect_uri = GOOGLE_REDIRECT_URI or url_for('google_callback', _external=True)
 
     mode = request.args.get('mode', 'login')
     # Generate random state for CSRF protection
