@@ -43,6 +43,10 @@ from ai_engine import RoyalVistaAI
 chatbot_data_path = os.path.join(os.path.dirname(__file__), 'chatbot_data.json')
 rv_ai = RoyalVistaAI(chatbot_data_path)
 
+# Google Drive Config
+GOOGLE_DRIVE_FOLDER_ID = os.environ.get('GOOGLE_DRIVE_FOLDER_ID') # Should be set in Render
+from utils import upload_to_drive
+
 # Check for environment variable, fallback to dev key if not set
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'default_royalvista_key_2026')
 csrf = CSRFProtect(app)
@@ -321,139 +325,16 @@ def home():
     content = {item.key: item.value for item in SiteContent.query.all()}
     return render_template('index.html', services=services, portfolio=portfolio, content=content)
 
-@app.route("/register", methods=['GET', 'POST'])
-def register():
-    if current_user.is_authenticated: return redirect(url_for('dashboard'))
-    
-    # Pre-fill from session (if coming from Google Login)
-    prefill_username = session.pop('prefill_username', None)
-    prefill_email = session.pop('prefill_email', None)
-
-    if request.method == 'POST':
-        username = request.form.get('username')
-        email = request.form.get('email')
-        phone = request.form.get('phone')
-        password = request.form.get('password')
-        
-        print(f"DEBUG: Registration POST received. Name: {username}, Email: {email}, Phone: {phone}")
-        
-        if not validate_inputs(username, email, password):
-            print(f"DEBUG: Validation Failed for {email}")
-            flash('Please fill in all required fields.', 'danger')
-            return render_template('login.html', mode='register', username=username, email=email, phone=phone)
-            
-        if phone and not validate_phone_format(phone):
-            flash('Invalid phone number. Use only digits and optional leading + (7-15 digits)', 'danger')
-            return render_template('login.html', mode='register', username=username, email=email, phone=phone)
-        
-        # Check for duplicates: Email OR Phone
-        existing_email = User.query.filter_by(email=email).first()
-        if existing_email:
-            print(f"DEBUG: Email {email} already registered.")
-            flash('This email is already registered. Please login.', 'warning')
-            return render_template('login.html', mode='login', email=email)
-
-        if phone:
-            existing_phone = User.query.filter_by(phone_number=phone).first()
-            if existing_phone:
-                print(f"DEBUG: Phone {phone} already registered.")
-                flash('This phone number is already linked to an account. Please login.', 'warning')
-                return render_template('login.html', mode='register', username=username, email=email, phone=phone)
-        
-        hashed_pw = bcrypt.generate_password_hash(password).decode('utf-8')
-        
-        try:
-            # Check for Super Admin Email
-            role = 'Client'
-            is_admin = False
-            perms = '[]'
-            if email == 'royalvistatechsolutions@gmail.com':
-                role = 'Super Admin'
-                is_admin = True
-                perms = json.dumps(['jobs', 'newsletters', 'chatbot', 'users'])
-                
-            user = User(username=username, email=email, phone_number=phone, password=hashed_pw, 
-                        role=role, is_admin=is_admin, permissions=perms, custom_user_id=gen_user_id())
-            db.session.add(user)
-            db.session.commit()
-            print(f"DEBUG: User {user.id} created successfully.")
-            
-            # Background Sync to Sheets (to avoid blocking the request)
-            sync_data = {
-                'id': user.id,
-                'username': user.username,
-                'email': user.email,
-                'phone_number': user.phone_number,
-                'password': user.password,
-                'google_id': user.google_id,
-                'custom_user_id': user.custom_user_id,
-                'is_admin': user.is_admin,
-                'is_active_status': user.is_active_status,
-                'is_subscribed': user.is_subscribed,
-                'created_at': user.created_at.strftime('%Y-%m-%d %H:%M:%S'),
-                'permissions': user.permissions,
-                'role': user.role,
-                'profile_edited_count': user.profile_edited_count
-            }
-            threading.Thread(target=sync_to_google_sheets, args=(sync_data, 'User')).start()
-        except Exception as e:
-            db.session.rollback()
-            print(f"DEBUG: Registration Storage Error: {e}")
-            flash('An error occurred during registration. Please try again.', 'danger')
-            return render_template('login.html', mode='register', username=username, email=email, phone=phone)
-
-        # Audit & Notification
-        log_audit(db, user.id, "User Registered", f"Email: {email}")
-        add_notification(user.id, "Welcome to RoyalVista!", 
-                         "Explore our services and start your first project today.", 
-                         link=url_for('dashboard'), 
-                         template='emails/welcome.html')
-        
-        # Notify Admin
-        admin = User.query.filter_by(is_admin=True).first()
-        if admin:
-            add_notification(admin.id, "New User Registration", f"User {username} ({user.custom_user_id}) just signed up.", 
-                             link=url_for('dashboard'),
-                             template='emails/admin_alert.html', 
-                             event_type='New User', 
-                             event_details=f"User ID: {user.custom_user_id} | Name: {username} joined.", 
-                             user_name='Admin', user_email=email)
-
-        login_user(user)
-        flash('Welcome to RoyalVista!', 'success')
-        return redirect(url_for('dashboard'))
-    
-    return render_template('login.html', mode='register', username=prefill_username, email=prefill_email)
-
-@app.route("/login", methods=['GET', 'POST'])
+@app.route("/login", methods=['GET'])
 def login():
     if current_user.is_authenticated: return redirect(url_for('dashboard'))
-    if request.method == 'POST':
-        email, password = request.form.get('email'), request.form.get('password')
-        user = User.query.filter_by(email=email).first()
-        
-        if user:
-            # Check password
-            if bcrypt.check_password_hash(user.password, password):
-                login_user(user)
-                log_audit(db, user.id, "User Login")
-                # Redirect clients directly to Pipeline tab, admins to default view
-                anchor = 'tab-pipeline' if user.role == 'Client' else None
-                return redirect(url_for('dashboard', _anchor=anchor))
-            else:
-                # Password incorrect. Check if this is a Google-only account trying to login manually.
-                # Note: Google users get a random password on creation, so manual login is impossible unless they reset it.
-                if user.google_id and not user.password: 
-                    # This case handles if we ever allow null passwords, though currently we set random ones.
-                    flash('This account was created with Google. Please use "Login with Google".', 'warning')
-                elif user.google_id:
-                     flash('Invalid credentials. If you signed up with Google, please use that button or reset your password.', 'danger')
-                else:
-                    flash('Invalid credentials.', 'danger')
-        else:
-            flash('Invalid credentials.', 'danger')
-            
     return render_template('login.html', mode='login')
+
+@app.route("/register", methods=['GET'])
+def register():
+    if current_user.is_authenticated: return redirect(url_for('dashboard'))
+    return render_template('login.html', mode='register')
+
 
 from urllib.parse import urlparse
 
@@ -462,14 +343,10 @@ def google_login():
     # If redirect_uri is not set in environment, we use a dynamic fallback
     redirect_uri = GOOGLE_REDIRECT_URI or url_for('google_callback', _external=True)
 
-    mode = request.args.get('mode', 'login')
     # Generate random state for CSRF protection
     state = secrets.token_urlsafe(32)
     session.permanent = True
     session['oauth_state'] = state
-    session['oauth_mode'] = mode
-    
-    print(f"DEBUG: Google Login. Mode: {mode}, State: {state}")
     
     # Build Google OAuth URL
     google_auth_url = (
@@ -484,6 +361,7 @@ def google_login():
     )
     
     return redirect(google_auth_url)
+
 
 @app.route("/auth/google/callback")
 def google_callback():
@@ -533,17 +411,12 @@ def google_callback():
         
         # Check if user exists
         user = User.query.filter_by(email=email).first()
-        mode = session.pop('oauth_mode', 'login')
         
         if not user:
-            if mode == 'login':
-                flash('No account found with this Google email. Please register first.', 'warning')
-                return redirect(url_for('register'))
-
-            # Automatic Registration for Google Users (only if in register mode)
-            print(f"DEBUG: New Google User detected via Register mode: {email}. Creating account...")
+            # Automatic Registration for Google Users (any mode)
+            print(f"DEBUG: New Google User detected: {email}. Creating account...")
             
-            # Generate a random password for Google-only users (they can change it later or use forgot password)
+            # Generate a random password for Google-only users
             random_password = ''.join(random.choices(string.ascii_letters + string.digits, k=16))
             hashed_pw = bcrypt.generate_password_hash(random_password).decode('utf-8')
             
@@ -581,7 +454,7 @@ def google_callback():
                 }
                 threading.Thread(target=sync_to_google_sheets, args=(sync_data, 'User')).start()
 
-                # Audit & Notification (Threaded to prevent blocking redirections/502s)
+                # Audit & Notification (Threaded to prevent blocking)
                 def background_notify():
                     log_audit(db, user.id, "User Registered via Google")
                     add_notification(user.id, "Welcome to RoyalVista!", 
@@ -592,12 +465,11 @@ def google_callback():
                 threading.Thread(target=background_notify).start()
                 
                 flash(f'Welcome to RoyalVista, {name}! Your account has been created.', 'success')
-                session['new_google_user'] = True
             except Exception as e:
                 db.session.rollback()
                 print(f"DEBUG: Google Registration Error: {e}")
                 flash('An error occurred while creating your account. Please try again.', 'danger')
-                return redirect(url_for('register'))
+                return redirect(url_for('login'))
         else:
             # Update Google ID if not set
             if not user.google_id:
@@ -736,27 +608,6 @@ def handle_profile_request(rid, action):
     return redirect(url_for('dashboard', _anchor='tab-profile-requests'))
         
 
-@app.route("/forgot-password", methods=['GET', 'POST'])
-def forgot_password():
-    if request.method == 'POST':
-        email = request.form.get('email')
-        user = User.query.filter_by(email=email).first()
-        if user:
-            # In a real app, generate a token and send a link.
-            # Here we simulate sending a reset link.
-            reset_token = secrets.token_urlsafe(16)
-            # Store token in DB or redis if implementing full flow. 
-            # For now, we will just email them a notification that they can reset.
-            send_email_styled(email, "Password Reset Request", 'emails/base_email.html',
-                              # Re-using base template for simplicity or create a specific one
-                              subject="Password Reset",
-                              body=f"Hello {user.username},<br><br>We received a request to reset your password. <br>Since this is a demo, please contact admin to reset credentials or just use Google Login if available.")
-            flash(f'Recovery instructions sent to {email}.', 'info')
-        else:
-            flash(f'Recovery instructions sent to {email}.', 'info') # Same msg for security
-            
-        return redirect(url_for('login'))
-    return render_template('login.html', mode='forgot')
 
 @app.route("/contact", methods=['POST'])
 def contact():
@@ -830,15 +681,20 @@ def dashboard():
                 cat = request.form.get('category')
                 file = request.files.get('image')
                 image_url = 'assets/images/portfolio-web.png'
-                if file:
+                if file and file.filename:
                     fname = secure_filename(file.filename)
-                    file_path = os.path.join(app.config['UPLOAD_FOLDER'], fname)
+                    file_path = os.path.join(app.root_path, 'static/assets/portfolio', fname)
                     file.save(file_path)
                     
                     # Apply Watermark
                     apply_watermark(file_path)
                     
-                    image_url = f'assets/uploads/{fname}'
+                    # Upload to Drive
+                    drive_id, direct_link = upload_to_drive(file_path, GOOGLE_DRIVE_FOLDER_ID)
+                    if direct_link:
+                        image_url = direct_link
+                    else:
+                        image_url = f'assets/portfolio/{fname}'
                 
                 item = PortfolioItem(title=title, client_name=client, category=cat, image_url=image_url)
                 db.session.add(item)
@@ -860,19 +716,26 @@ def dashboard():
                     
                     if file and file.filename:
                         fname = secure_filename(file.filename)
-                        file.save(os.path.join(app.config['UPLOAD_FOLDER'], fname))
-                        file_url = f'assets/uploads/{fname}'
+                        temp_path = os.path.join(app.root_path, 'static', fname)
+                        file.save(temp_path)
+                        
                         ext = fname.lower().split('.')[-1]
                         if ext in ['jpg', 'png', 'jpeg', 'gif']:
                             file_type = 'image'
-                            # Apply Watermark immediately if it is an image
-                            try:
-                                full_path = os.path.join(app.root_path, app.config['UPLOAD_FOLDER'], fname)
-                                apply_watermark(full_path)
-                            except Exception as e:
-                                print(f"Failed to apply watermark to order image: {e}")
+                            apply_watermark(temp_path)
                         elif ext in ['mp4']: file_type = 'video'
                         elif ext in ['pdf']: file_type = 'document'
+                        
+                        # Upload to Drive
+                        drive_id, direct_link = upload_to_drive(temp_path, GOOGLE_DRIVE_FOLDER_ID)
+                        if direct_link:
+                            file_url = direct_link
+                        else:
+                            file_url = f'assets/uploads/{fname}'
+                        
+                        # Clean up local file (optional, but good for stateless)
+                        try: os.remove(temp_path)
+                        except: pass
 
                     # Auto-add to Portfolio if a file is present or explicitly completed, regardless of status being technically 'Completed' (handles Reopened/In Progress updates with potential deliverables)
                     # Auto-add to Portfolio Logic
@@ -1209,7 +1072,12 @@ def manage_portfolio():
         # Apply Watermark
         apply_watermark(file_path)
         
-        image_url = f'assets/portfolio/{fname}'
+        # Upload to Drive
+        drive_id, direct_link = upload_to_drive(file_path, GOOGLE_DRIVE_FOLDER_ID)
+        if direct_link:
+            image_url = direct_link
+        else:
+            image_url = f'assets/portfolio/{fname}'
 
     if action == 'add':
         item = PortfolioItem(title=title, client_name=client_name, category=category, external_link=link, image_url=image_url)
@@ -1501,8 +1369,15 @@ def admin_job_action():
     file = request.files.get('image')
     if file and file.filename:
         fname = secure_filename(f"job_{int(datetime.utcnow().timestamp())}_{file.filename}")
-        file.save(os.path.join(app.root_path, 'static/assets/jobs', fname))
-        image_url = f'assets/jobs/{fname}'
+        file_path = os.path.join(app.root_path, 'static/assets/jobs', fname)
+        file.save(file_path)
+        
+        # Upload to Drive
+        drive_id, direct_link = upload_to_drive(file_path, GOOGLE_DRIVE_FOLDER_ID)
+        if direct_link:
+            image_url = direct_link
+        else:
+            image_url = f'assets/jobs/{fname}'
 
     if action_type == 'create':
         job = Job(title=title, description=desc, categories=cats, eligible_years=years, external_link=link, image_url=image_url)

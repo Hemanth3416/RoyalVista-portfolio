@@ -111,46 +111,20 @@
             {% endwith %}
         </div>
 
-        {% if mode == 'forgot' %}
-        <h2>Recovery</h2>
-        <p>Enter your email to receive a secure link.</p>
-        <form method="POST">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <div class="form-group"><input type="email" name="email" placeholder="Email Address" required></div>
-            <button type="submit" class="btn btn-primary full-width">Send Recovery link</button>
-            <a href="{{ url_for('login') }}" class="forgot-link">Back to Login</a>
-        </form>
-        {% else %}
-        <div class="auth-toggle">
-            <a href="{{ url_for('login') }}" class="{{ 'active' if mode == 'login' }}">Login</a>
-            <a href="{{ url_for('register') }}" class="{{ 'active' if mode == 'register' }}">Register</a>
+        <div style="margin: 2rem 0;">
+            <h2 style="margin-bottom: 0.5rem;">Welcome to RoyalVista</h2>
+            <p style="color: var(--text-muted); margin-bottom: 2rem;">Please sign in with your Google account to continue to your dashboard.</p>
+            
+            <a href="{{ url_for('google_login') }}" class="google-btn">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" width="20" alt="Google Logo"> 
+                Continue with Google
+            </a>
         </div>
+        
+        <p style="font-size: 0.85rem; color: #666; margin-top: 2rem; border-top: 1px solid #333; padding-top: 1.5rem;">
+            By continuing, you agree to RoyalVista's Terms of Service and Privacy Policy.
+        </p>
 
-        <a href="{{ url_for('google_login', mode=mode) }}" class="google-btn"><img
-                src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" width="20"
-                alt="Google Logo"> Sign in with Google</a>
-
-        <div style="margin: 1rem 0; color: #555;">OR</div>
-
-        <form method="POST">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            {% if mode == 'register' %}
-            <div class="form-group"><input type="text" name="username" placeholder="Full Name" required
-                    value="{{ username if username }}"></div>
-            <div class="form-group"><input type="text" name="phone" placeholder="Phone Number (e.g. +1234567890)"
-                    required pattern="^\+?[0-9]{7,15}$" title="Only numbers and + allowed, 7-15 digits"
-                    oninput="this.value = this.value.replace(/[^0-9+]/g, '')"></div>
-            {% endif %}
-            <div class="form-group"><input type="email" name="email" placeholder="Email Address" required
-                    value="{{ email if email }}"></div>
-            <div class="form-group"><input type="password" name="password" placeholder="Password" required></div>
-
-            <button type="submit" class="btn btn-primary full-width">{{ 'Create Account' if mode == 'register' else
-                'Sign In' }}</button>
-
-            <a href="{{ url_for('forgot_password') }}" class="forgot-link">Forgot password?</a>
-        </form>
-        {% endif %}
     </div>
 </body>
 
