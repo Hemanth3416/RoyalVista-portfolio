@@ -1,5 +1,6 @@
 from flask import Flask, render_template, url_for, flash, redirect, request, send_file, session, jsonify
 import os
+from werkzeug.middleware.proxy_fix import ProxyFix
 import re
 import secrets
 try:
@@ -30,10 +31,12 @@ import requests
 # Google OAuth Config
 GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID')
 GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET')
-GOOGLE_REDIRECT_URI = os.environ.get('GOOGLE_REDIRECT_URI', 'http://localhost:5005/auth/google/callback')
+GOOGLE_REDIRECT_URI = os.environ.get('GOOGLE_REDIRECT_URI', 'https://royalvistatechsolutions.onrender.com/auth/google/callback')
 GOOGLE_DISCOVERY_URL = "https://accounts.google.com/.well-known/openid-configuration"
 
 app = Flask(__name__)
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
+app.config['PREFERRED_URL_SCHEME'] = 'https'
 
 # AI Engine Initialization
 from ai_engine import RoyalVistaAI
