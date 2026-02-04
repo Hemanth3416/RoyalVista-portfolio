@@ -59,117 +59,82 @@ def sync_to_google_sheets(data, category='Lead'):
         print(f"Error: Unknown sync category '{category}'")
         return False
 
-    ws_name, headers = config[category]
-    timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+# Standardized Headers for Google Sheets Sync (Model based)
+SYNC_CONFIG = {
+    'User': ['id', 'username', 'email', 'phone_number', 'password', 'google_id', 'custom_user_id', 'is_admin', 'is_active_status', 'is_subscribed', 'created_at', 'permissions', 'role', 'profile_edited_count'],
+    'Order': ['id', 'custom_order_id', 'user_id', 'service_name', 'details', 'status', 'output_url', 'output_type', 'created_at'],
+    'Ticket': ['id', 'custom_ticket_id', 'user_id', 'order_id', 'subject', 'description', 'priority', 'status', 'created_at'],
+    'Portfolio': ['id', 'title', 'client_name', 'category', 'image_url', 'video_url', 'external_link', 'active'],
+    'Job': ['id', 'title', 'description', 'categories', 'eligible_years', 'image_url', 'external_link', 'status', 'scheduled_time', 'share_count', 'created_at', 'posted_at'],
+    'Lead': ['id', 'full_name', 'email', 'phone', 'service', 'message', 'created_at'],
+    'Notification': ['id', 'user_id', 'title', 'message', 'is_read', 'link', 'created_at'],
+    'ProfileRequest': ['id', 'user_id', 'new_username', 'new_phone', 'description', 'status', 'created_at'],
+    'Email': ['id', 'subject', 'body', 'recipients', 'scheduled_time', 'status', 'created_at', 'sent_at'],
+    'Subscription': ['id', 'user_id', 'category_id', 'timestamp']
+}
 
-    if not creds_json and not os.path.exists(credentials_file):
-        print(f"[MOCK SYNC] {category} Data: {data}")
-        return False
-        
+def sync_to_google_sheets(data, category='User'):
+    """Synchronizes data to Google Sheets using a standardized header configuration."""
+    creds_json = os.environ.get('GOOGLE_SHEETS_CREDS_JSON')
+    credentials_file = 'credentials.json'
+    sheet_name = os.environ.get('GOOGLE_SHEET_NAME', 'RoyalVista_DB')
+    
+    sheet_mapping = {
+        'User': 'Users', 'Order': 'Orders', 'Lead': 'Leads', 'Ticket': 'Tickets',
+        'Portfolio': 'Portfolio', 'Job': 'Jobs', 'ProfileRequest': 'Profile Requests',
+        'Notification': 'Notifications', 'Email': 'Emails', 'Subscription': 'Subscriptions'
+    }
+    
+    if category not in SYNC_CONFIG: return False
+    ws_name = sheet_mapping.get(category, category)
+    headers = SYNC_CONFIG[category]
+    timestamp = datetime.now(timezone.utc).isoformat()
+
     try:
         import gspread
         from google.oauth2.service_account import Credentials
-        
         scopes = ['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive']
         
         if creds_json:
             import json
-            info = json.loads(creds_json)
-            creds = Credentials.from_service_account_info(info, scopes=scopes)
+            creds = Credentials.from_service_account_info(json.loads(creds_json), scopes=scopes)
         else:
+            if not os.path.exists(credentials_file): return False
             creds = Credentials.from_service_account_file(credentials_file, scopes=scopes)
             
         client = gspread.authorize(creds)
+        spreadsheet = client.open(sheet_name)
         
-        try:
-            spreadsheet = client.open(sheet_name)
-        except gspread.SpreadsheetNotFound:
-            print(f"Error: Spreadsheet '{sheet_name}' not found.")
-            return False
-
-        # Get or create worksheet
         try:
             worksheet = spreadsheet.worksheet(ws_name)
         except gspread.WorksheetNotFound:
-            worksheet = spreadsheet.add_worksheet(title=ws_name, rows=100, cols=len(headers))
+            worksheet = spreadsheet.add_worksheet(title=ws_name, rows=1000, cols=len(headers) + 2)
             worksheet.append_row(headers)
 
-        # Prepare row data based on category
+        # Build Row
         row = []
-        if category == 'Lead':
-            row = [data.get('full_name'), data.get('email'), data.get('phone'), data.get('service'), data.get('message'), 'Lead', timestamp]
-        elif category == 'Order':
-            row = [data.get('order_id'), data.get('user'), data.get('service'), data.get('details'), data.get('user_id'), data.get('phone'), data.get('status', 'Submitted'), timestamp]
-        elif category == 'User':
-            row = [
-                data.get('id'),
-                data.get('username'),
-                data.get('email'),
-                data.get('phone_number'),
-                data.get('password'),
-                data.get('google_id'),
-                data.get('custom_user_id'),
-                data.get('is_admin'),
-                data.get('is_active_status'),
-                data.get('is_subscribed'),
-                data.get('created_at', timestamp),
-                data.get('permissions'),
-                data.get('role'),
-                data.get('profile_edited_count')
-            ]
-        elif category == 'Ticket':
-            row = [data.get('ticket_id'), data.get('user'), data.get('order_id'), data.get('subject'), data.get('priority'), data.get('status', 'Open'), timestamp]
-        elif category == 'Portfolio':
-            row = [data.get('id'), data.get('title'), data.get('client_name'), data.get('category'), data.get('image_url'), data.get('active'), timestamp]
-        elif category == 'Job':
-            row = [data.get('id'), data.get('title'), data.get('categories'), data.get('eligible_years'), data.get('status'), data.get('share_count'), timestamp]
-        elif category == 'Log':
-            row = [data.get('id'), data.get('user_id'), data.get('action'), data.get('details'), data.get('ip'), timestamp]
-        elif category == 'ProfileRequest':
-            row = [data.get('id'), data.get('user_id'), data.get('new_name'), data.get('new_phone'), data.get('description'), data.get('status'), timestamp]
-        elif category == 'Notification':
-            row = [data.get('id'), data.get('user_id'), data.get('title'), data.get('message'), data.get('is_read'), timestamp]
-        elif category == 'Email':
-            row = [data.get('id'), data.get('subject'), data.get('status'), data.get('scheduled'), data.get('sent_at'), timestamp]
-        elif category == 'Subscription':
-            row = [data.get('id'), data.get('user_id'), data.get('category_id'), timestamp]
+        for h in headers:
+            val = data.get(h)
+            if val is None and h in ['created_at', 'timestamp']: val = timestamp
+            row.append(str(val) if val is not None else "")
 
-        # Check for duplicates before appending
-        data_col_index = None
+        # Duplicate Check
         unique_val = None
-        
+        col_idx = None
         if category == 'User':
-            data_col_index = 3 # Email is 3rd column (id, username, email)
-            unique_val = data.get('email')
-        # Allow duplicate Leads (same email can contact multiple times)
-        # elif category == 'Lead': ...  REMOVED
-        elif category == 'Order':
-            data_col_index = 1 # Order ID is 1st column
-            unique_val = data.get('order_id')
-        elif category == 'Ticket':
-            data_col_index = 1 # Ticket ID is 1st column
-            unique_val = data.get('ticket_id')
-
-        if data_col_index and unique_val:
+            unique_val = data.get('email'); col_idx = 3
+        elif data.get('id'):
+            unique_val = str(data.get('id')); col_idx = 1
+        
+        if unique_val and col_idx:
             try:
-                # Get all values in the unique column
-                existing_vals = worksheet.col_values(data_col_index)
-                if unique_val in existing_vals:
-                    print(f"Skipping sync for {category}: {unique_val} already exists in Sheet.")
-                    return True # Treat as success to avoid retries
-            except Exception as e:
-                print(f"Error checking duplicates in Sheet: {e}")
+                if str(unique_val) in worksheet.col_values(col_idx): return True
+            except: pass
 
         worksheet.append_row(row)
         return True
-
     except Exception as e:
-        print(f"Google Sheets Sync Error ({category}): {e}")
-        # Local Fallback
-        try:
-            with open('local_sync_log.csv', 'a') as f:
-                f.write(f"{timestamp},{category},{json.dumps(data)}\n")
-        except: pass
+        print(f"Sheet Sync Error ({category}): {e}")
         return False
 
 def fetch_from_google_sheets(category='User'):

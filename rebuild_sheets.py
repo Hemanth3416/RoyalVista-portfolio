@@ -27,6 +27,7 @@ def rebuild():
         return
 
     # 2. Define Headers and Data Mapping for ALL tables (Total 11 Tabs)
+    # 2. Define Headers and Data Mapping for ALL tables
     config = {
         'Users': {
             'headers': ['id', 'username', 'email', 'phone_number', 'password', 'google_id', 'custom_user_id', 'is_admin', 'is_active_status', 'is_subscribed', 'created_at', 'permissions', 'role', 'profile_edited_count'],
@@ -48,17 +49,9 @@ def rebuild():
             'headers': ['id', 'title', 'description', 'categories', 'eligible_years', 'image_url', 'external_link', 'status', 'scheduled_time', 'share_count', 'created_at', 'posted_at'],
             'sql': 'SELECT id, title, description, categories, eligible_years, image_url, external_link, status, scheduled_time, share_count, created_at, posted_at FROM job',
         },
-        'Audit Logs': {
-            'headers': ['id', 'user_id', 'action', 'details', 'ip_address', 'timestamp'],
-            'sql': 'SELECT id, user_id, action, details, ip_address, timestamp FROM audit_log',
-        },
-        'Profile Requests': {
-            'headers': ['id', 'user_id', 'new_username', 'new_phone', 'description', 'status', 'created_at'],
-            'sql': 'SELECT id, user_id, new_username, new_phone, description, status, created_at FROM profile_request',
-        },
-        'Notifications': {
-            'headers': ['id', 'user_id', 'title', 'message', 'is_read', 'link', 'created_at'],
-            'sql': 'SELECT id, user_id, title, message, is_read, link, created_at FROM notification',
+        'Leads': {
+            'headers': ['id', 'full_name', 'email', 'phone', 'service', 'message', 'created_at'],
+            'sql': 'SELECT id, full_name, email, phone, service, message, created_at FROM lead',
         }
     }
 

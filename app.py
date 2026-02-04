@@ -712,19 +712,21 @@ def contact():
         flash('Please fill in all required fields.', 'danger')
         return redirect(url_for('home', _anchor='contact'))
 
-    data = {
-        'full_name': name,
-        'email': email,
-        'phone': phone,
-        'service': service,
-        'message': msg
-    }
     # Parallel Storage: Database & Sheets
     try:
         new_lead = Lead(full_name=name, email=email, phone=phone, service=service, message=msg)
         db.session.add(new_lead)
         db.session.commit()
         
+        # Standardized Sync Data
+        data = {
+            'id': new_lead.id,
+            'full_name': name,
+            'email': email,
+            'phone': phone,
+            'service': service,
+            'message': msg
+        }
         # Background Sync to Sheets
         threading.Thread(target=sync_to_google_sheets, args=(data, 'Lead')).start()
     except Exception as e:
@@ -1018,12 +1020,12 @@ def dashboard():
                     
                     # Background Sync to Sheets
                     sync_data = {
-                        'order_id': cust_id, 
-                        'user_id': current_user.custom_user_id, 
-                        'phone': current_user.phone_number,
-                        'user': current_user.email, 
-                        'service': service.title, 
-                        'details': details
+                        'id': order.id,
+                        'custom_order_id': cust_id, 
+                        'user_id': current_user.id, 
+                        'service_name': service.title, 
+                        'details': details,
+                        'status': 'Submitted'
                     }
                     threading.Thread(target=sync_to_google_sheets, args=(sync_data, 'Order')).start()
                 except Exception as e:
@@ -1074,8 +1076,17 @@ def dashboard():
                 db.session.commit()
                 
                 # Parallel Sync to Sheets
-                sync_to_google_sheets({'ticket_id': ticket.custom_ticket_id, 'user': current_user.email, 'order_id': order_id, 
-                                    'subject': subject, 'priority': priority}, category='Ticket')
+                sync_data = {
+                    'id': ticket.id,
+                    'custom_ticket_id': ticket.custom_ticket_id,
+                    'user_id': current_user.id,
+                    'order_id': order_id,
+                    'subject': subject,
+                    'description': desc,
+                    'priority': priority,
+                    'status': 'Open'
+                }
+                threading.Thread(target=sync_to_google_sheets, args=(sync_data, 'Ticket')).start()
             except Exception as e:
                 db.session.rollback()
                 print(f"Ticket Storage Error: {e}")
@@ -1210,6 +1221,8 @@ def manage_portfolio():
             'client_name': item.client_name,
             'category': item.category,
             'image_url': item.image_url,
+            'video_url': item.video_url,
+            'external_link': item.external_link,
             'active': item.active
         }
         threading.Thread(target=sync_to_google_sheets, args=(sync_data, 'Portfolio')).start()
@@ -1647,8 +1660,11 @@ def admin_job_action():
         sync_data = {
             'id': job.id,
             'title': job.title,
+            'description': job.description,
             'categories': job.categories,
             'eligible_years': job.eligible_years,
+            'image_url': job.image_url,
+            'external_link': job.external_link,
             'status': job.status,
             'share_count': job.share_count
         }
