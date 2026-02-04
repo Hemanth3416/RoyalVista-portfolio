@@ -953,25 +953,21 @@ ul {
     width: 200%;
     height: 200%;
     transform: translate(-50%, -50%) rotate(-30deg);
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: rgba(255, 255, 255, 0.08);
+    font-size: 2.5rem;
+    font-weight: 800;
+    color: rgba(255, 255, 255, 0.15);
     display: flex;
     align-items: center;
     justify-content: center;
     white-space: nowrap;
     pointer-events: none;
     z-index: 1;
-    overflow: hidden;
     letter-spacing: 5px;
-    /* Create a repeating effect using multiple shadows or we can use another method */
     text-shadow: 
-        300px 200px rgba(255, 255, 255, 0.05),
-        -300px -200px rgba(255, 255, 255, 0.05),
-        300px -200px rgba(255, 255, 255, 0.05),
-        -300px 200px rgba(255, 255, 255, 0.05),
-        600px 400px rgba(255, 255, 255, 0.05),
-        -600px -400px rgba(255, 255, 255, 0.05);
+        400px 300px rgba(255, 255, 255, 0.12),
+        -400px -300px rgba(255, 255, 255, 0.12),
+        400px -300px rgba(255, 255, 255, 0.12),
+        -400px 300px rgba(255, 255, 255, 0.12);
 }
 
 

@@ -272,9 +272,9 @@ def apply_watermark(image_path):
         txt_mask = Image.new("L", (canvas_size, canvas_size), 0)
         draw = ImageDraw.Draw(txt_mask)
         
-        # Dynamic font size - Serif fonts tend to be thinner, so maybe slightly larger or same
-        font_size = int(max(width, height) / 30)
-        if font_size < 20: font_size = 20
+        # Dynamic font size - Serif fonts tend to be thinner, so significantly larger to be readable
+        font_size = int(max(width, height) / 15)
+        if font_size < 40: font_size = 40
         
         try:
             # Try loading a standard Serif font to match the "Sample" reference
@@ -305,9 +305,9 @@ def apply_watermark(image_path):
         except:
             text_width = font_size * len(text) * 0.6
             
-        # Spacing - The sample has significant spacing
-        gap_x = int(text_width * 0.8) # Wider gap between words
-        gap_y = int(font_size * 6)    # Significant vertical gap
+        # Spacing - Optimized for readability
+        gap_x = int(text_width * 0.6) # Tighter horizontal gap
+        gap_y = int(font_size * 4)    # Reduced vertical gap for better density
         step_x = int(text_width + gap_x)
         step_y = int(font_size + gap_y)
         
@@ -321,12 +321,12 @@ def apply_watermark(image_path):
                 # Draw white text (full opacity on mask)
                 draw.text((x + offset_x, y), text, font=font, fill=255)
         
-        # 2. Create Gradient Layer (Lightly applied)
+        # 2. Create Gradient Layer (Enhanced Visibility)
         # Colors: #6C63FF (108, 99, 255) -> #03dac6 (3, 218, 198)
         grad_base = Image.new("RGBA", (2, 1))
-        # Very low opacity (30) -> Adjusted to 60 (approx 23%) for better visibility while still being "lightly"
-        grad_base.putpixel((0, 0), (108, 99, 255, 100)) 
-        grad_base.putpixel((1, 0), (3, 218, 198, 100))
+        # Increased opacity to 160 (approx 63%) for clear visibility
+        grad_base.putpixel((0, 0), (108, 99, 255, 160)) 
+        grad_base.putpixel((1, 0), (3, 218, 198, 160))
         
         # Resize to fill canvas (Bilinear interpolation creates the gradient)
         gradient = grad_base.resize((canvas_size, canvas_size), resample=Image.BILINEAR)
