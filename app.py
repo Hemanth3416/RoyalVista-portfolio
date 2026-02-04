@@ -569,31 +569,7 @@ def google_callback():
                 )
                 db.session.add(user)
                 db.session.commit()
-                print(f"DEBUG: Google account created for {email}")
-                
-                # Background Sync to Sheets (Prevent failure if offline)
-                try:
-                    sync_data = {
-                        'id': user.id,
-                        'username': user.username,
-                        'email': user.email,
-                        'phone_number': user.phone_number,
-                        'password': user.password,
-                        'google_id': user.google_id,
-                        'custom_user_id': user.custom_user_id,
-                        'is_admin': user.is_admin,
-                        'is_active_status': user.is_active_status,
-                        'is_subscribed': user.is_subscribed,
-                        'created_at': user.created_at.strftime('%Y-%m-%d %H:%M:%S'),
-                        'permissions': user.permissions,
-                        'role': user.role,
-                        'profile_edited_count': user.profile_edited_count
-                    }
-                    threading.Thread(target=sync_to_google_sheets, args=(sync_data, 'User')).start()
-                except Exception as sync_e:
-                    print(f"DEBUG: Sheets Sync failed but user created: {sync_e}")
-                
-                # Audit & Notification
+                # Audit & Notification (Threaded to prevent blocking redirections)
                 log_audit(db, user.id, "User Registered via Google")
                 add_notification(user.id, "Welcome to RoyalVista!", 
                                  "Your account has been created via Google.", 
