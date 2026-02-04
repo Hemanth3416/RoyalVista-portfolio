@@ -14,7 +14,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_bcrypt import Bcrypt
 from flask_login import LoginManager, login_user, current_user, logout_user, login_required
 from models import db, User, Service, Order, SiteContent, OrderTimeline, PortfolioItem, Notification, AuditLog, SupportTicket, Job, JobCategory, JobSubscription, Lead, ProfileRequest
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 from werkzeug.utils import secure_filename
 from flask_wtf.csrf import CSRFProtect
 from utils import generate_invoice_pdf, sync_to_google_sheets, send_notification_email, log_audit, backup_db, apply_watermark
@@ -82,12 +82,11 @@ app.config['SESSION_COOKIE_SECURE'] = False
 def process_scheduled_tasks():
     with app.app_context():
         # Process Emails
-        pending_emails = ScheduledEmail.query.filter(
+        emails = ScheduledEmail.query.filter(
             ScheduledEmail.status == 'Scheduled',
-            ScheduledEmail.scheduled_time <= datetime.utcnow()
+            ScheduledEmail.scheduled_time <= datetime.now(timezone.utc)
         ).all()
-        
-        for email in pending_emails:
+        for email in emails:
             try:
                 recipients = json.loads(email.recipients)
                 for addr in recipients:
@@ -95,22 +94,21 @@ def process_scheduled_tasks():
                                          subject=email.subject, body=email.body)
                 
                 email.status = 'Sent'
-                email.sent_at = datetime.utcnow()
+                email.sent_at = datetime.now(timezone.utc)
                 db.session.commit()
             except Exception as e:
                 email.status = 'Failed'
                 email.error_log = str(e)
                 db.session.commit()
 
-        # Process Scheduled Jobs
-        pending_jobs = Job.query.filter(
+        # Process scheduled jobs
+        jobs = Job.query.filter(
             Job.status == 'Scheduled',
-            Job.scheduled_time <= datetime.utcnow()
+            Job.scheduled_time <= datetime.now(timezone.utc)
         ).all()
-        
-        for job in pending_jobs:
+        for job in jobs:
             job.status = 'Posted'
-            job.posted_at = datetime.utcnow()
+            job.posted_at = datetime.now(timezone.utc)
             db.session.commit()
             
             # Notify subscribers
@@ -213,9 +211,11 @@ def load_user(user_id):
 
 def init_db():
     with app.app_context():
-        # Ensure instance folder exists
-        if not os.path.exists('instance'):
-            os.makedirs('instance')
+        # Ensure instance and upload folders exist
+        for folder in ['instance', 'static/assets/uploads', 'static/assets/portfolio', 'static/assets/jobs']:
+            full_path = os.path.join(app.root_path, folder)
+            if not os.path.exists(full_path):
+                os.makedirs(full_path)
         
         # Using a safer approach for schema updates
         db.create_all()
@@ -1064,7 +1064,7 @@ def manage_portfolio():
     file = request.files.get('image')
     image_url = None
     if file and file.filename:
-        fname = secure_filename(f"p_{int(datetime.utcnow().timestamp())}_{file.filename}")
+        fname = secure_filename(f"p_{int(datetime.now(timezone.utc).timestamp())}_{file.filename}")
         file_path = os.path.join(app.root_path, 'static/assets/portfolio', fname)
         file.save(file_path)
         
@@ -1367,7 +1367,7 @@ def admin_job_action():
     image_url = None
     file = request.files.get('image')
     if file and file.filename:
-        fname = secure_filename(f"job_{int(datetime.utcnow().timestamp())}_{file.filename}")
+        fname = secure_filename(f"job_{int(datetime.now(timezone.utc).timestamp())}_{file.filename}")
         file_path = os.path.join(app.root_path, 'static/assets/jobs', fname)
         file.save(file_path)
         
@@ -1403,7 +1403,7 @@ def admin_job_action():
     if job:
         if post_status == 'Post Now':
             job.status = 'Posted'
-            job.posted_at = datetime.utcnow()
+            job.posted_at = datetime.now(timezone.utc)
             db.session.commit()
             notify_job_subscribers(job)
             flash('Job posted successfully!', 'success')

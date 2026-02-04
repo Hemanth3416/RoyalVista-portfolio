@@ -33,6 +33,7 @@ Render is the best alternative for free Python hosting.
    - `MAIL_USERNAME`: royalvistatechsolutions@gmail.com
    - `MAIL_PASSWORD`: [PASTE_APP_PASSWORD_FROM_CONVERSATION]
    - `IMGBB_API_KEY`: [GET_FROM_API.IMGBB.COM]
+   - `GOOGLE_SHEETS_CREDS_JSON`: [PASTE_FULL_JSON_CONTENT_FROM_CREDENTIALS_JSON] (Optional alternative to Step 4)
 
 4. **Secret Files:**
    - Add a Secret File named `credentials.json` and paste the contents of your local `credentials.json`.
