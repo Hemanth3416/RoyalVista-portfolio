@@ -172,6 +172,55 @@ def sync_to_google_sheets(data, category='Lead'):
         except: pass
         return False
 
+def fetch_from_google_sheets(category='User'):
+    """
+    Fetches data from Google Sheets for a specific category.
+    Returns a list of dictionaries.
+    """
+    creds_json = os.environ.get('GOOGLE_SHEETS_CREDS_JSON')
+    credentials_file = 'credentials.json'
+    sheet_name = os.environ.get('GOOGLE_SHEET_NAME', 'RoyalVista_DB')
+    
+    config = {
+        'User': 'Users',
+        'Order': 'Orders',
+        'Lead': 'Leads',
+        'Ticket': 'Tickets',
+        'Portfolio': 'Portfolio',
+        'Job': 'Jobs',
+        'ProfileRequest': 'Profile Requests',
+        'Notification': 'Notifications'
+    }
+    
+    if category not in config:
+        return []
+        
+    ws_name = config[category]
+    
+    try:
+        import gspread
+        from google.oauth2.service_account import Credentials
+        
+        scopes = ['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive']
+        
+        if creds_json:
+            import json
+            info = json.loads(creds_json)
+            creds = Credentials.from_service_account_info(info, scopes=scopes)
+        else:
+            if not os.path.exists(credentials_file): return []
+            creds = Credentials.from_service_account_file(credentials_file, scopes=scopes)
+            
+        client = gspread.authorize(creds)
+        spreadsheet = client.open(sheet_name)
+        worksheet = spreadsheet.worksheet(ws_name)
+        
+        # Get all records as a list of dictionaries
+        return worksheet.get_all_records()
+    except Exception as e:
+        print(f"Error fetching from Sheets ({category}): {e}")
+        return []
+
 def send_notification_email(to_email, subject, body_html):
     """
     Sends an email using Gmail SMTP.

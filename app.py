@@ -279,8 +279,48 @@ def init_db():
                 JobCategory(name='Experienced'),
                 JobCategory(name='Hackathons')
             ])
-            
         db.session.commit()
+        
+        # --- Auto-Restore Logic ---
+        # If the local DB has no portfolio items or jobs, try to restore from cloud
+        try:
+            from models import PortfolioItem, Job
+            if PortfolioItem.query.first() is None and Job.query.first() is None:
+                print("Database empty. Attempting auto-restore from Google Sheets...")
+                from utils import fetch_from_google_sheets
+                
+                # Restore Portfolio
+                p_data = fetch_from_google_sheets('Portfolio')
+                for p in p_data:
+                    if p.get('Title'):
+                        new_p = PortfolioItem(
+                            title=p.get('Title'),
+                            client_name=p.get('Client'),
+                            category=p.get('Category'),
+                            image_url=p.get('Image URL'),
+                            active=True
+                        )
+                        db.session.add(new_p)
+                
+                # Restore Jobs
+                j_data = fetch_from_google_sheets('Job')
+                for j in j_data:
+                    if j.get('Title'):
+                        new_j = Job(
+                            title=j.get('Title'),
+                            description="Restored from cloud...",
+                            categories=j.get('Categories'),
+                            eligible_years=j.get('Eligible Years'),
+                            status=j.get('Status', 'Posted'),
+                            share_count=int(j.get('Share Count', 0))
+                        )
+                        db.session.add(new_j)
+                
+                db.session.commit()
+                print("Auto-restore complete.")
+        except Exception as e:
+            print(f"Auto-restore failed: {e}")
+            db.session.rollback()
 
 # --- Decorators & Helpers ---
 from functools import wraps
@@ -1110,7 +1150,7 @@ def manage_portfolio():
 
     return redirect(url_for('dashboard'))
 
-@app.route("/delete_portfolio/<int:item_id>")
+@app.route("/delete_portfolio/<int:item_id>", methods=['POST'])
 @login_required
 def delete_portfolio(item_id):
     if not current_user.is_admin: return redirect(url_for('dashboard'))
@@ -1149,10 +1189,101 @@ def edit_user():
 @login_required
 def trigger_backup():
     if not current_user.is_admin: return redirect(url_for('dashboard'))
-    if backup_db():
-        flash('Database backup successful.', 'success')
-    else:
-        flash('Backup failed.', 'danger')
+    return backup_db()
+
+@app.route("/admin/restore")
+@login_required
+def restore_from_sheets():
+    if not current_user.is_admin: return redirect(url_for('dashboard'))
+    
+    from utils import fetch_from_google_sheets
+    count = 0
+    
+    # Restore Users
+    user_data = fetch_from_google_sheets('User')
+    for u in user_data:
+        if not User.query.filter_by(email=u.get('email')).first():
+            new_user = User(
+                username=u.get('username'),
+                email=u.get('email'),
+                password=u.get('password'),
+                phone_number=u.get('phone_number'),
+                google_id=u.get('google_id'),
+                custom_user_id=u.get('custom_user_id'),
+                is_admin=bool(u.get('is_admin')),
+                role=u.get('role', 'Client'),
+                permissions=u.get('permissions', '[]'),
+                is_active_status=bool(u.get('is_active_status', True))
+            )
+            db.session.add(new_user)
+            count += 1
+            
+    # Restore Portfolio
+    p_data = fetch_from_google_sheets('Portfolio')
+    for p in p_data:
+        if not PortfolioItem.query.filter_by(title=p.get('Title')).first():
+            new_p = PortfolioItem(
+                title=p.get('Title'),
+                client_name=p.get('Client'),
+                category=p.get('Category'),
+                image_url=p.get('Image URL'),
+                active=bool(p.get('Status', True))
+            )
+            db.session.add(new_p)
+            count += 1
+            
+    # Restore Jobs
+    j_data = fetch_from_google_sheets('Job')
+    for j in j_data:
+        if not Job.query.filter_by(title=j.get('Title')).first():
+            new_j = Job(
+                title=j.get('Title'),
+                description="Restored from backup...",
+                categories=j.get('Categories'),
+                eligible_years=j.get('Eligible Years'),
+                status=j.get('Status', 'Posted'),
+                share_count=int(j.get('Share Count', 0))
+            )
+            db.session.add(new_j)
+            count += 1
+
+    db.session.commit()
+    
+    # Restore Orders
+    o_data = fetch_from_google_sheets('Order')
+    for o in o_data:
+        if not Order.query.filter_by(custom_order_id=o.get('Order ID')).first():
+            client = User.query.filter_by(email=o.get('Client Email')).first()
+            if client:
+                new_o = Order(
+                    custom_order_id=o.get('Order ID'),
+                    user_id=client.id,
+                    service_name=o.get('Service'),
+                    details=o.get('Details'),
+                    status=o.get('Status', 'Submitted')
+                )
+                db.session.add(new_o)
+                count += 1
+    db.session.commit()
+
+    # Restore Tickets
+    t_data = fetch_from_google_sheets('Ticket')
+    for t in t_data:
+        if not SupportTicket.query.filter_by(custom_ticket_id=t.get('Ticket ID')).first():
+            user = User.query.filter_by(email=t.get('User Email')).first()
+            if user:
+                new_t = SupportTicket(
+                    custom_ticket_id=t.get('Ticket ID'),
+                    user_id=user.id,
+                    subject=t.get('Subject'),
+                    priority=t.get('Priority', 'Medium'),
+                    status=t.get('Status', 'Open')
+                )
+                db.session.add(new_t)
+                count += 1
+    db.session.commit()
+
+    flash(f'Restoration complete. {count} items recovered from Google Sheets.', 'success')
     return redirect(url_for('dashboard'))
 
 @app.route("/admin/newsletter/preview", methods=['POST'])

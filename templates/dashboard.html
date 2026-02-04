@@ -260,7 +260,11 @@
                     </a>
                     <a href="{{ url_for('trigger_backup') }}" class="btn-small"
                         style="background: rgba(255,255,255,0.05); color: #fff; border: 1px solid #333; padding: 0.6rem 1.2rem; border-radius: 8px; white-space: nowrap;">
-                        <i class="fas fa-database"></i> Run Backup
+                        <i class="fas fa-cloud-upload-alt"></i> Backup to Sheets
+                    </a>
+                    <a href="{{ url_for('restore_from_sheets') }}" class="btn-small"
+                        style="background: rgba(108, 99, 255, 0.1); color: var(--primary-color); border: 1px solid var(--primary-color); padding: 0.6rem 1.2rem; border-radius: 8px; white-space: nowrap;">
+                        <i class="fas fa-cloud-download-alt"></i> Restore from Sheets
                     </a>
                     <a href="{{ url_for('logout') }}" class="btn-small mobile-logout-btn"
                         style="background: rgba(255, 99, 132, 0.1); color: #ff6384; border: 1px solid #ff6384; padding: 0.6rem 1.2rem; border-radius: 8px; white-space: nowrap;">
@@ -628,11 +632,12 @@
                                             style="background: rgba(3, 218, 198, 0.1); color: var(--secondary-color); border: 1px solid var(--secondary-color);">
                                             <i class="fas fa-edit"></i> Edit
                                         </button>
-                                        <a href="{{ url_for('delete_portfolio', item_id=p.id) }}"
-                                            onclick="return confirm('Delete this portfolio item?')" class="btn-small"
-                                            style="background: rgba(255, 99, 132, 0.1); color: #ff6384; border: 1px solid #ff6384;">
-                                            <i class="fas fa-trash-alt"></i>
-                                        </a>
+                                        <form action="{{ url_for('delete_portfolio', item_id=p.id) }}" method="POST" style="display:inline;" onsubmit="return confirm('Permanently delete this item?')">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                            <button type="submit" class="btn-small" style="background: rgba(255, 99, 132, 0.1); color: #ff6384; border: 1px solid #ff6384;">
+                                                <i class="fas fa-trash-alt"></i>
+                                            </button>
+                                        </form>
                                     </div>
                                 </td>
                             </tr>
@@ -689,11 +694,12 @@
                                 style="flex: 1; background: rgba(3, 218, 198, 0.1); color: var(--secondary-color); border: 1px solid var(--secondary-color);">
                                 <i class="fas fa-edit"></i> Edit
                             </button>
-                            <a href="{{ url_for('delete_portfolio', item_id=p.id) }}"
-                                onclick="return confirm('Delete this portfolio item?')" class="btn-small"
-                                style="flex: 1; background: rgba(255, 99, 132, 0.1); color: #ff6384; border: 1px solid #ff6384; text-align: center;">
-                                <i class="fas fa-trash-alt"></i> Delete
-                            </a>
+                            <form action="{{ url_for('delete_portfolio', item_id=p.id) }}" method="POST" style="flex: 1; display:flex;" onsubmit="return confirm('Delete this portfolio item?')">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="btn-small" style="width:100%; background: rgba(255, 99, 132, 0.1); color: #ff6384; border: 1px solid #ff6384; text-align: center;">
+                                    <i class="fas fa-trash-alt"></i> Delete
+                                </button>
+                            </form>
                         </div>
                     </div>
                     {% endfor %}
