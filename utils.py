@@ -276,8 +276,8 @@ def apply_watermark(image_path):
         # Colors: #6C63FF (108, 99, 255) -> #03dac6 (3, 218, 198)
         grad_base = Image.new("RGBA", (2, 1))
         # Very low opacity (30) -> Adjusted to 60 (approx 23%) for better visibility while still being "lightly"
-        grad_base.putpixel((0, 0), (108, 99, 255, 60)) 
-        grad_base.putpixel((1, 0), (3, 218, 198, 60))
+        grad_base.putpixel((0, 0), (108, 99, 255, 100)) 
+        grad_base.putpixel((1, 0), (3, 218, 198, 100))
         
         # Resize to fill canvas (Bilinear interpolation creates the gradient)
         gradient = grad_base.resize((canvas_size, canvas_size), resample=Image.BILINEAR)

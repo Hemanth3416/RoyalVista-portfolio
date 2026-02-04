@@ -1371,6 +1371,9 @@ def admin_job_action():
         file_path = os.path.join(app.root_path, 'static/assets/jobs', fname)
         file.save(file_path)
         
+        # Apply Watermark
+        apply_watermark(file_path)
+        
         # Upload to ImgBB
         direct_link = upload_to_imgbb(file_path)
         if direct_link:
