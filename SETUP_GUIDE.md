@@ -48,7 +48,14 @@ We use a "Service Account" to write data securely to your Google Sheet without m
         *   `Type` (Lead/Order)
         *   `Timestamp`
 
-## 3. Install Requirements
+## 3. Image Storage (ImgBB)
+
+We use ImgBB to store images permanently (since Render deletes local files on restart).
+
+1.  **Get API Key**: Go to [api.imgbb.com](https://api.imgbb.com/) and create a free account to get your API key.
+2.  **Add to Config**: Add `IMGBB_API_KEY=your_key_here` to your `.env` or Render environment variables.
+
+## 4. Install Requirements
 
 Ensure you have the necessary libraries installed by running this command in your terminal:
 

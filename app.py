@@ -43,9 +43,8 @@ from ai_engine import RoyalVistaAI
 chatbot_data_path = os.path.join(os.path.dirname(__file__), 'chatbot_data.json')
 rv_ai = RoyalVistaAI(chatbot_data_path)
 
-# Google Drive Config
-GOOGLE_DRIVE_FOLDER_ID = os.environ.get('GOOGLE_DRIVE_FOLDER_ID') # Should be set in Render
-from utils import upload_to_drive
+# Google Drive Config - REMOVED (Using ImgBB)
+from utils import upload_to_imgbb
 
 # Check for environment variable, fallback to dev key if not set
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'default_royalvista_key_2026')
@@ -689,8 +688,8 @@ def dashboard():
                     # Apply Watermark
                     apply_watermark(file_path)
                     
-                    # Upload to Drive
-                    drive_id, direct_link = upload_to_drive(file_path, GOOGLE_DRIVE_FOLDER_ID)
+                    # Upload to ImgBB
+                    direct_link = upload_to_imgbb(file_path)
                     if direct_link:
                         image_url = direct_link
                     else:
@@ -726,8 +725,8 @@ def dashboard():
                         elif ext in ['mp4']: file_type = 'video'
                         elif ext in ['pdf']: file_type = 'document'
                         
-                        # Upload to Drive
-                        drive_id, direct_link = upload_to_drive(temp_path, GOOGLE_DRIVE_FOLDER_ID)
+                        # Upload to ImgBB
+                        direct_link = upload_to_imgbb(temp_path)
                         if direct_link:
                             file_url = direct_link
                         else:
@@ -1072,8 +1071,8 @@ def manage_portfolio():
         # Apply Watermark
         apply_watermark(file_path)
         
-        # Upload to Drive
-        drive_id, direct_link = upload_to_drive(file_path, GOOGLE_DRIVE_FOLDER_ID)
+        # Upload to ImgBB
+        direct_link = upload_to_imgbb(file_path)
         if direct_link:
             image_url = direct_link
         else:
@@ -1372,8 +1371,8 @@ def admin_job_action():
         file_path = os.path.join(app.root_path, 'static/assets/jobs', fname)
         file.save(file_path)
         
-        # Upload to Drive
-        drive_id, direct_link = upload_to_drive(file_path, GOOGLE_DRIVE_FOLDER_ID)
+        # Upload to ImgBB
+        direct_link = upload_to_imgbb(file_path)
         if direct_link:
             image_url = direct_link
         else:

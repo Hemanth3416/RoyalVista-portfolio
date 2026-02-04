@@ -20,6 +20,14 @@ import ssl
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
+try:
+    from googleapiclient.discovery import build
+    from googleapiclient.http import MediaFileUpload
+    from google.oauth2.service_account import Credentials
+    GOOGLE_DRIVE_AVAILABLE = True
+except ImportError:
+    GOOGLE_DRIVE_AVAILABLE = False
+
 def sync_to_google_sheets(data, category='Lead'):
     """
     Syncs form data to a Google Sheet into specific worksheets.
@@ -390,44 +398,29 @@ def backup_db(db_path='instance/site.db', backup_dir='backups'):
         for old in backups[:-7]:
             os.remove(os.path.join(backup_dir, old))
     return True
-def upload_to_drive(file_path, folder_id=None):
-    """Uploads a file to Google Drive and returns the file_id and a direct link."""
-    credentials_file = 'credentials.json'
-    creds_json = os.environ.get('GOOGLE_SHEETS_CREDS_JSON')
-    
-    if not creds_json and not os.path.exists(credentials_file):
-        print("Error: No credentials found for Google Drive upload.")
-        return None, None
+def upload_to_imgbb(file_path):
+    """Uploads an image to ImgBB and returns the direct link."""
+    api_key = os.environ.get('IMGBB_API_KEY')
+    if not api_key:
+        print("Error: IMGBB_API_KEY is missing in environment variables.")
+        return None
 
     try:
-        from googleapiclient.discovery import build
-        from googleapiclient.http import MediaFileUpload
-        from google.oauth2.service_account import Credentials
-        
-        scopes = ['https://www.googleapis.com/auth/drive']
-        if creds_json:
-            creds = Credentials.from_service_account_info(json.loads(creds_json), scopes=scopes)
-        else:
-            creds = Credentials.from_service_account_file(credentials_file, scopes=scopes)
+        import requests
+        import base64
 
-        service = build('drive', 'v3', credentials=creds)
-        
-        file_metadata = {'name': os.path.basename(file_path)}
-        if folder_id:
-            file_metadata['parents'] = [folder_id]
-
-        media = MediaFileUpload(file_path, resumable=True)
-        file = service.files().create(body=file_metadata, media_body=media, fields='id').execute()
-        
-        file_id = file.get('id')
-        
-        # Make the file publicly readable (required for displaying in <img> tags)
-        service.permissions().create(fileId=file_id, body={'type': 'anyone', 'role': 'reader'}).execute()
-        
-        # Format for direct viewing
-        direct_link = f"https://drive.google.com/thumbnail?id={file_id}&sz=w1000"
-        
-        return file_id, direct_link
+        with open(file_path, "rb") as file:
+            url = "https://api.imgbb.com/1/upload"
+            payload = {
+                "key": api_key,
+                "image": base64.b64encode(file.read()).decode('utf-8'),
+            }
+            res = requests.post(url, payload)
+            res.raise_for_status()
+            
+            data = res.json()
+            # Return the direct URL of the uploaded image
+            return data['data']['url']
     except Exception as e:
-        print(f"Google Drive Upload Error: {e}")
-        return None, None
+        print(f"ImgBB Upload Error: {e}")
+        return None
