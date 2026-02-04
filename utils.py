@@ -272,8 +272,8 @@ def apply_watermark(image_path):
         txt_mask = Image.new("L", (canvas_size, canvas_size), 0)
         draw = ImageDraw.Draw(txt_mask)
         
-        # Dynamic font size - Serif fonts tend to be thinner, so significantly larger to be readable
-        font_size = int(max(width, height) / 15)
+        # Dynamic font size - larger for better visibility
+        font_size = int(max(width, height) / 12)
         if font_size < 40: font_size = 40
         
         try:
@@ -310,16 +310,12 @@ def apply_watermark(image_path):
         gap_y = int(font_size * 4)    # Reduced vertical gap for better density
         step_x = int(text_width + gap_x)
         step_y = int(font_size + gap_y)
-        
         # Draw Text on Mask
-        for y in range(0, canvas_size, step_y):
-            row_idx = y // step_y
-            # Offset every other row heavily to create the diagonal checkerboard feel
-            offset_x = int(step_x / 2) if row_idx % 2 == 1 else 0
-            
-            for x in range(-int(step_x), canvas_size, step_x):
-                # Draw white text (full opacity on mask)
-                draw.text((x + offset_x, y), text, font=font, fill=255)
+        text_w, text_h = draw.textbbox((0, 0), text, font=font)[2:]
+        margin = 20 # Denser pattern, changed from previous spacing logic
+        for y in range(0, canvas_size, text_h + margin):
+            for x in range(0, canvas_size, text_w + margin):
+                draw.text((x, y), text, fill=255, font=font)
         
         # 2. Create Gradient Layer (Enhanced Visibility)
         # Colors: #6C63FF (108, 99, 255) -> #03dac6 (3, 218, 198)

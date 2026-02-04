@@ -945,29 +945,32 @@ ul {
 }
 
 /* Watermark Implementation (Diagonal Repeating Pattern) */
-.portfolio-img::after {
+.portfolio-img::after,
+.modal-media::after,
+.job-img-container::after {
     content: "RoyalVista Tech Solutions";
     position: absolute;
     top: 50%;
     left: 50%;
-    width: 200%;
-    height: 200%;
-    transform: translate(-50%, -50%) rotate(-30deg);
-    font-size: 2.5rem;
-    font-weight: 800;
-    color: rgba(255, 255, 255, 0.15);
+    width: 250%;
+    height: 250%;
+    transform: translate(-50%, -50%) rotate(-35deg);
+    font-size: 3rem;
+    font-weight: 900;
+    color: rgba(255, 255, 255, 0.2);
     display: flex;
     align-items: center;
     justify-content: center;
     white-space: nowrap;
     pointer-events: none;
-    z-index: 1;
-    letter-spacing: 5px;
+    z-index: 100;
+    letter-spacing: 8px;
     text-shadow: 
-        400px 300px rgba(255, 255, 255, 0.12),
-        -400px -300px rgba(255, 255, 255, 0.12),
-        400px -300px rgba(255, 255, 255, 0.12),
-        -400px 300px rgba(255, 255, 255, 0.12);
+        400px 300px rgba(255, 255, 255, 0.15),
+        -400px -300px rgba(255, 255, 255, 0.15),
+        400px -300px rgba(255, 255, 255, 0.15),
+        -400px 300px rgba(255, 255, 255, 0.15),
+        800px 600px rgba(255, 255, 255, 0.1);
 }
 
 
@@ -1678,6 +1681,7 @@ footer p {
     justify-content: center;
     align-items: center;
     position: relative;
+    overflow: hidden;
 }
 
 .modal-media img,
