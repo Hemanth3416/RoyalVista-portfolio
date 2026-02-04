@@ -292,12 +292,13 @@ def init_db():
                 # Restore Portfolio
                 p_data = fetch_from_google_sheets('Portfolio')
                 for p in p_data:
-                    if p.get('Title'):
+                    title = str(p.get('Title', '')).strip()
+                    if title:
                         new_p = PortfolioItem(
-                            title=p.get('Title'),
-                            client_name=p.get('Client'),
-                            category=p.get('Category'),
-                            image_url=p.get('Image URL'),
+                            title=title,
+                            client_name=str(p.get('Client', '')),
+                            category=str(p.get('Category', 'Others')),
+                            image_url=str(p.get('Image URL', '')),
                             active=True
                         )
                         db.session.add(new_p)
@@ -305,14 +306,15 @@ def init_db():
                 # Restore Jobs
                 j_data = fetch_from_google_sheets('Job')
                 for j in j_data:
-                    if j.get('Title'):
+                    title = str(j.get('Title', '')).strip()
+                    if title:
                         new_j = Job(
-                            title=j.get('Title'),
+                            title=title,
                             description="Restored from cloud...",
-                            categories=j.get('Categories'),
-                            eligible_years=j.get('Eligible Years'),
-                            status=j.get('Status', 'Posted'),
-                            share_count=int(j.get('Share Count', 0))
+                            categories=str(j.get('Categories', '')),
+                            eligible_years=str(j.get('Eligible Years', '')),
+                            status=str(j.get('Status', 'Posted')),
+                            share_count=int(j.get('Share Count', 0)) if str(j.get('Share Count')).isdigit() else 0
                         )
                         db.session.add(new_j)
                 
@@ -494,14 +496,18 @@ def google_callback():
                 threading.Thread(target=sync_to_google_sheets, args=(sync_data, 'User')).start()
 
                 # Audit & Notification (Threaded to prevent blocking)
-                def background_notify():
-                    log_audit(db, user.id, "User Registered via Google")
-                    add_notification(user.id, "Welcome to RoyalVista!", 
-                                     "Your account has been created via Google.", 
-                                     link=url_for('dashboard'), 
-                                     template='emails/welcome.html')
+                def background_notify(app_obj, user_id, name_val):
+                    with app_obj.app_context():
+                        try:
+                            log_audit(db, user_id, "User Registered via Google")
+                            add_notification(user_id, "Welcome to RoyalVista!", 
+                                            "Your account has been created via Google.", 
+                                            link=url_for('dashboard'), 
+                                            template='emails/welcome.html')
+                        except Exception as e:
+                            print(f"Background Notify Error: {e}")
                 
-                threading.Thread(target=background_notify).start()
+                threading.Thread(target=background_notify, args=(app, user.id, name)).start()
                 
                 flash(f'Welcome to RoyalVista, {name}! Your account has been created.', 'success')
             except Exception as e:
@@ -1189,7 +1195,11 @@ def edit_user():
 @login_required
 def trigger_backup():
     if not current_user.is_admin: return redirect(url_for('dashboard'))
-    return backup_db()
+    if backup_db():
+        flash('Database backup to Google Sheets successful.', 'success')
+    else:
+        flash('Database backup failed. Check credentials.', 'danger')
+    return redirect(url_for('dashboard', _anchor='tab-settings'))
 
 @app.route("/admin/restore")
 @login_required
@@ -1199,68 +1209,78 @@ def restore_from_sheets():
     from utils import fetch_from_google_sheets
     count = 0
     
+    def clean_bool(val):
+        if isinstance(val, bool): return val
+        if str(val).lower() in ['true', '1', 'yes']: return True
+        return False
+
     # Restore Users
     user_data = fetch_from_google_sheets('User')
     for u in user_data:
-        if not User.query.filter_by(email=u.get('email')).first():
+        email = str(u.get('email', '')).strip()
+        if email and not User.query.filter_by(email=email).first():
             new_user = User(
-                username=u.get('username'),
-                email=u.get('email'),
-                password=u.get('password'),
-                phone_number=u.get('phone_number'),
-                google_id=u.get('google_id'),
-                custom_user_id=u.get('custom_user_id'),
-                is_admin=bool(u.get('is_admin')),
-                role=u.get('role', 'Client'),
-                permissions=u.get('permissions', '[]'),
-                is_active_status=bool(u.get('is_active_status', True))
+                username=str(u.get('username', 'User')),
+                email=email,
+                password=str(u.get('password', '')),
+                phone_number=str(u.get('phone_number', '')),
+                google_id=str(u.get('google_id', '')) if u.get('google_id') else None,
+                custom_user_id=str(u.get('custom_user_id', gen_user_id())),
+                is_admin=clean_bool(u.get('is_admin')),
+                role=str(u.get('role', 'Client')),
+                permissions=str(u.get('permissions', '[]')),
+                is_active_status=clean_bool(u.get('is_active_status', True))
             )
             db.session.add(new_user)
             count += 1
+    db.session.commit()
             
     # Restore Portfolio
     p_data = fetch_from_google_sheets('Portfolio')
     for p in p_data:
-        if not PortfolioItem.query.filter_by(title=p.get('Title')).first():
+        title = str(p.get('Title', '')).strip()
+        if title and not PortfolioItem.query.filter_by(title=title).first():
             new_p = PortfolioItem(
-                title=p.get('Title'),
-                client_name=p.get('Client'),
-                category=p.get('Category'),
-                image_url=p.get('Image URL'),
-                active=bool(p.get('Status', True))
+                title=title,
+                client_name=str(p.get('Client', '')),
+                category=str(p.get('Category', 'Others')),
+                image_url=str(p.get('Image URL', '')),
+                active=clean_bool(p.get('Status', True))
             )
             db.session.add(new_p)
             count += 1
+    db.session.commit()
             
     # Restore Jobs
     j_data = fetch_from_google_sheets('Job')
     for j in j_data:
-        if not Job.query.filter_by(title=j.get('Title')).first():
+        title = str(j.get('Title', '')).strip()
+        if title and not Job.query.filter_by(title=title).first():
             new_j = Job(
-                title=j.get('Title'),
+                title=title,
                 description="Restored from backup...",
-                categories=j.get('Categories'),
-                eligible_years=j.get('Eligible Years'),
-                status=j.get('Status', 'Posted'),
-                share_count=int(j.get('Share Count', 0))
+                categories=str(j.get('Categories', '')),
+                eligible_years=str(j.get('Eligible Years', '')),
+                status=str(j.get('Status', 'Posted')),
+                share_count=int(j.get('Share Count', 0)) if str(j.get('Share Count')).isdigit() else 0
             )
             db.session.add(new_j)
             count += 1
-
     db.session.commit()
     
     # Restore Orders
     o_data = fetch_from_google_sheets('Order')
     for o in o_data:
-        if not Order.query.filter_by(custom_order_id=o.get('Order ID')).first():
-            client = User.query.filter_by(email=o.get('Client Email')).first()
+        oid = str(o.get('Order ID', '')).strip()
+        if oid and not Order.query.filter_by(custom_order_id=oid).first():
+            client = User.query.filter_by(email=str(o.get('Client Email', '')).strip()).first()
             if client:
                 new_o = Order(
-                    custom_order_id=o.get('Order ID'),
+                    custom_order_id=oid,
                     user_id=client.id,
-                    service_name=o.get('Service'),
-                    details=o.get('Details'),
-                    status=o.get('Status', 'Submitted')
+                    service_name=str(o.get('Service', 'Service')),
+                    details=str(o.get('Details', 'Details')),
+                    status=str(o.get('Status', 'Submitted'))
                 )
                 db.session.add(new_o)
                 count += 1
@@ -1269,22 +1289,24 @@ def restore_from_sheets():
     # Restore Tickets
     t_data = fetch_from_google_sheets('Ticket')
     for t in t_data:
-        if not SupportTicket.query.filter_by(custom_ticket_id=t.get('Ticket ID')).first():
-            user = User.query.filter_by(email=t.get('User Email')).first()
+        tid = str(t.get('Ticket ID', '')).strip()
+        if tid and not SupportTicket.query.filter_by(custom_ticket_id=tid).first():
+            user = User.query.filter_by(email=str(t.get('User Email', '')).strip()).first()
             if user:
                 new_t = SupportTicket(
-                    custom_ticket_id=t.get('Ticket ID'),
+                    custom_ticket_id=tid,
                     user_id=user.id,
-                    subject=t.get('Subject'),
-                    priority=t.get('Priority', 'Medium'),
-                    status=t.get('Status', 'Open')
+                    subject=str(t.get('Subject', 'Support Ticket')),
+                    priority=str(t.get('Priority', 'Medium')),
+                    status=str(t.get('Status', 'Open')),
+                    description="Restored from cloud..."
                 )
                 db.session.add(new_t)
                 count += 1
     db.session.commit()
 
     flash(f'Restoration complete. {count} items recovered from Google Sheets.', 'success')
-    return redirect(url_for('dashboard'))
+    return redirect(url_for('dashboard', _anchor='tab-managed'))
 
 @app.route("/admin/newsletter/preview", methods=['POST'])
 @login_required
