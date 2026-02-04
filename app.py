@@ -681,7 +681,7 @@ def dashboard():
                 file = request.files.get('image')
                 image_url = 'assets/images/portfolio-web.png'
                 if file and file.filename:
-                    fname = secure_filename(file.filename)
+                    fname = secure_filename(f"p_{int(datetime.now(timezone.utc).timestamp())}_{file.filename}")
                     file_path = os.path.join(app.root_path, 'static/assets/portfolio', fname)
                     file.save(file_path)
                     
@@ -714,8 +714,8 @@ def dashboard():
                     file_type = None
                     
                     if file and file.filename:
-                        fname = secure_filename(file.filename)
-                        temp_path = os.path.join(app.root_path, 'static', fname)
+                        fname = secure_filename(f"{int(datetime.now(timezone.utc).timestamp())}_{file.filename}")
+                        temp_path = os.path.join(app.root_path, 'static/assets/uploads', fname)
                         file.save(temp_path)
                         
                         ext = fname.lower().split('.')[-1]

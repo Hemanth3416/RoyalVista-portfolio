@@ -478,17 +478,25 @@
                                             <strong>{{ event.timestamp.strftime('%m-%d') }}:</strong> {{ event.note }}
                                             {% if event.file_url %}
                                             <div style="margin-top:5px;">
+                                                {% set clean_url = event.file_url.replace('static/', '', 1) if event.file_url.startswith('static/') else event.file_url %}
                                                 {% if event.file_type == 'image' %}
-                                                <img src="{{ url_for('static', filename=event.file_url) }}"
-                                                    class="timeline-file-preview" alt="Preview">
+                                                    {% if clean_url.startswith('http') %}
+                                                    <img src="{{ clean_url }}" class="timeline-file-preview" alt="Preview" onerror="this.src='/static/assets/images/portfolio-web.png'">
+                                                    {% else %}
+                                                    <img src="{{ url_for('static', filename=clean_url) }}" class="timeline-file-preview" alt="Preview" onerror="this.src='/static/assets/images/portfolio-web.png'">
+                                                    {% endif %}
                                                 {% elif event.file_type == 'video' %}
-                                                <video src="{{ url_for('static', filename=event.file_url) }}" controls
-                                                    class="timeline-file-preview"></video>
+                                                    {% if clean_url.startswith('http') %}
+                                                    <video src="{{ clean_url }}" controls class="timeline-file-preview"></video>
+                                                    {% else %}
+                                                    <video src="{{ url_for('static', filename=clean_url) }}" controls class="timeline-file-preview"></video>
+                                                    {% endif %}
                                                 {% else %}
-                                                <a href="{{ url_for('static', filename=event.file_url) }}"
-                                                    target="_blank" style="color:var(--primary-color);"><i
-                                                        class="fas fa-file-pdf"></i> View
-                                                    Document</a>
+                                                    {% if clean_url.startswith('http') %}
+                                                    <a href="{{ clean_url }}" target="_blank" style="color:var(--primary-color);"><i class="fas fa-file-pdf"></i> View Document</a>
+                                                    {% else %}
+                                                    <a href="{{ url_for('static', filename=clean_url) }}" target="_blank" style="color:var(--primary-color);"><i class="fas fa-file-pdf"></i> View Document</a>
+                                                    {% endif %}
                                                 {% endif %}
                                             </div>
                                             {% endif %}
@@ -591,8 +599,17 @@
                             {% for p in portfolio %}
                             <tr id="portfolio-{{ p.id }}">
                                 <td data-label="Visual">
-                                    <img src="{{ url_for('static', filename=p.image_url or 'assets/images/portfolio-web.png') }}"
+                                    {% if p.image_url %}
+                                        {% set clean_url = p.image_url.replace('static/', '', 1) if p.image_url.startswith('static/') else p.image_url %}
+                                        {% if clean_url.startswith('http') %}
+                                        <img src="{{ clean_url }}" alt="{{ p.title }}" style="width: 50px; height: 50px; border-radius: 8px; object-fit: cover; border: 1px solid var(--border-color);" onerror="this.src='/static/assets/images/portfolio-web.png'">
+                                        {% else %}
+                                        <img src="{{ url_for('static', filename=clean_url) }}" alt="{{ p.title }}" style="width: 50px; height: 50px; border-radius: 8px; object-fit: cover; border: 1px solid var(--border-color);" onerror="this.src='/static/assets/images/portfolio-web.png'">
+                                        {% endif %}
+                                    {% else %}
+                                    <img src="{{ url_for('static', filename='assets/images/portfolio-web.png') }}"
                                         style="width: 50px; height: 50px; border-radius: 8px; object-fit: cover; border: 1px solid var(--border-color);">
+                                    {% endif %}
                                 </td>
                                 <td data-label="Title">{{ p.title }}</td>
                                 <td data-label="Category">
@@ -629,8 +646,16 @@
                     {% for p in portfolio %}
                     <div class="portfolio-card" id="portfolio-card-{{ p.id }}">
                         <div class="portfolio-card-header">
-                            <img src="{{ url_for('static', filename=p.image_url or 'assets/images/portfolio-web.png') }}"
-                                class="portfolio-card-img">
+                            {% if p.image_url %}
+                                {% set clean_url = p.image_url.replace('static/', '', 1) if p.image_url.startswith('static/') else p.image_url %}
+                                {% if clean_url.startswith('http') %}
+                                <img src="{{ clean_url }}" class="portfolio-card-img">
+                                {% else %}
+                                <img src="{{ url_for('static', filename=clean_url) }}" class="portfolio-card-img">
+                                {% endif %}
+                            {% else %}
+                            <img src="{{ url_for('static', filename='assets/images/portfolio-web.png') }}" class="portfolio-card-img">
+                            {% endif %}
                             <div class="portfolio-card-info">
                                 <h4 class="portfolio-card-title">{{ p.title }}</h4>
                                 <span class="tag"
@@ -1318,8 +1343,22 @@
                                         <strong>{{ event.timestamp.strftime('%m-%d') }}:</strong> {{ event.note }}
                                         {% if event.file_url %}
                                         <div style="margin-top:5px;">
-                                            <a href="{{ url_for('static', filename=event.file_url) }}" target="_blank"
-                                                style="color:var(--primary-color);">View Attachment</a>
+                                            {% set clean_url = event.file_url.replace('static/', '', 1) if event.file_url.startswith('static/') else event.file_url %}
+                                            {% if event.file_type == 'image' %}
+                                                {% if clean_url.startswith('http') %}
+                                                <img src="{{ clean_url }}" class="timeline-file-preview" style="max-width:200px; border-radius:8px; display:block; margin-bottom:5px;" onerror="this.style.display='none'">
+                                                {% else %}
+                                                <img src="{{ url_for('static', filename=clean_url) }}" class="timeline-file-preview" style="max-width:200px; border-radius:8px; display:block; margin-bottom:5px;" onerror="this.style.display='none'">
+                                                {% endif %}
+                                            {% endif %}
+                                            
+                                            {% if clean_url.startswith('http') %}
+                                            <a href="{{ clean_url }}" target="_blank"
+                                                style="color:var(--primary-color); font-weight:600;"><i class="fas fa-external-link-alt"></i> View Attachment</a>
+                                            {% else %}
+                                            <a href="{{ url_for('static', filename=clean_url) }}" target="_blank"
+                                                style="color:var(--primary-color); font-weight:600;"><i class="fas fa-paperclip"></i> View Attachment</a>
+                                            {% endif %}
                                         </div>
                                         {% endif %}
                                     </div>
