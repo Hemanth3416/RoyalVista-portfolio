@@ -220,25 +220,37 @@ def init_db():
         # Using a safer approach for schema updates
         db.create_all()
         
-        # Manual migration for missing columns
-        for col, dtype in [("is_subscribed", "BOOLEAN DEFAULT 1"), ("created_at", "DATETIME"), ("permissions", "TEXT"), ("role", "VARCHAR(20) DEFAULT 'Client'"), ("is_active_status", "BOOLEAN DEFAULT 1"), ("profile_edited_count", "INTEGER DEFAULT 0"), ("custom_user_id", "VARCHAR(20)")]:
-            try:
-                db.session.execute(db.text(f"ALTER TABLE user ADD COLUMN {col} {dtype}"))
-                db.session.commit()
-            except Exception:
-                db.session.rollback()
-
-        # Update existing users without a Custom ID (using raw SQL to avoid model mismatch)
+        # Database Schema & Data Integrity Checks
         try:
-            users_without_id = db.session.execute(db.text("SELECT id FROM user WHERE custom_user_id IS NULL")).fetchall()
-            for row in users_without_id:
-                new_id = gen_user_id()
-                db.session.execute(db.text("UPDATE user SET custom_user_id = :cid WHERE id = :uid"), 
-                                   {'cid': new_id, 'uid': row[0]})
-            db.session.commit()
+            # Check existing columns to avoid redundant ALTER TABLE calls
+            existing_cols = [row[1] for row in db.session.execute(db.text("PRAGMA table_info(user)")).fetchall()]
+            for col, dtype in [
+                ("is_subscribed", "BOOLEAN DEFAULT 1"), 
+                ("created_at", "DATETIME"), 
+                ("permissions", "TEXT"), 
+                ("role", "VARCHAR(20) DEFAULT 'Client'"), 
+                ("is_active_status", "BOOLEAN DEFAULT 1"), 
+                ("profile_edited_count", "INTEGER DEFAULT 0"), 
+                ("custom_user_id", "VARCHAR(20)")
+            ]:
+                if col not in existing_cols:
+                    try:
+                        db.session.execute(db.text(f"ALTER TABLE user ADD COLUMN {col} {dtype}"))
+                        db.session.commit()
+                    except Exception:
+                        db.session.rollback()
+
+            # Batch update users without custom_user_id
+            users_to_update = db.session.execute(db.text("SELECT id FROM user WHERE custom_user_id IS NULL")).fetchall()
+            if users_to_update:
+                for row in users_to_update:
+                    new_id = gen_user_id()
+                    db.session.execute(db.text("UPDATE user SET custom_user_id = :cid WHERE id = :uid"), 
+                                       {'cid': new_id, 'uid': row[0]})
+                db.session.commit()
         except Exception as e:
             db.session.rollback()
-            print(f"ID Update Error: {e}")
+            print(f"Schema Update Error: {e}")
         
         if not User.query.filter_by(is_admin=True).first():
             hashed_pw = bcrypt.generate_password_hash('RoyalVista@2026').decode('utf-8')
