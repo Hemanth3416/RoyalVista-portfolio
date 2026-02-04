@@ -361,3 +361,100 @@ table td > div {
     position: relative;
     z-index: 1;
 }
+/* ========================================
+   LAPTOP & DESKTOP OPTIMIZATIONS
+   (Fix for disturbed templates on laptops)
+   ======================================== */
+
+@media (max-width: 1366px) {
+    :root {
+        --container-padding: 1.5rem;
+    }
+    
+    .container {
+        max-width: 1200px;
+        padding: 0 var(--container-padding);
+    }
+    
+    /* Optimize Hero for Laptops */
+    h1 {
+        font-size: 2.8rem;
+    }
+    
+    .hero {
+        min-height: 80vh;
+        height: auto;
+        padding: 120px 0 60px;
+    }
+    
+    /* Navbar spacing fix */
+    .nav-menu {
+        gap: 1.25rem;
+    }
+    
+    .nav-link {
+        font-size: 0.95rem;
+    }
+    
+    /* Sections tight scaling */
+    .section {
+        padding: 4rem 0;
+    }
+    
+    .section-header {
+        margin-bottom: 3rem;
+    }
+    
+    /* Dashboard Table Squashing Fix */
+    .dashboard-container {
+        max-width: 100%;
+        padding: 0 1.5rem;
+    }
+    
+    .table-responsive {
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        overflow-x: auto;
+    }
+    
+    table th, table td {
+        padding: 1rem 0.75rem;
+        font-size: 0.8rem;
+    }
+    
+    /* Action columns protection */
+    td:last-child {
+        min-width: 150px;
+    }
+    
+    /* Admin Nav scroll hint */
+    .admin-nav {
+        gap: 0.75rem;
+        padding-bottom: 0.8rem;
+    }
+    
+    .tab-link {
+        padding: 0.5rem 1rem;
+        font-size: 0.85rem;
+    }
+}
+
+/* Specific fix for high-DPI laptops (like Macbooks) */
+@media (min-width: 1025px) and (max-width: 1440px) {
+    .services-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+    
+    .portfolio-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+/* Fix for overlapping elements in contact section */
+.contact-wrapper {
+    align-items: flex-start;
+}
+
+.contact-form {
+    align-self: flex-start;
+}
