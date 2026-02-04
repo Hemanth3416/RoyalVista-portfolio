@@ -264,7 +264,11 @@
             <article class="job-card" onclick="location.href='{{ url_for('job_detail', job_id=job.id) }}';"
                 style="cursor: pointer;">
                 {% if job.image_url %}
-                <img src="{{ url_for('static', filename=job.image_url) }}" class="job-img" alt="{{ job.title }}">
+                    {% if job.image_url.startswith('http') %}
+                    <img src="{{ job.image_url }}" class="job-img" alt="{{ job.title }}">
+                    {% else %}
+                    <img src="{{ url_for('static', filename=job.image_url) }}" class="job-img" alt="{{ job.title }}">
+                    {% endif %}
                 {% else %}
                 <div class="job-img placeholder-img" role="img" aria-label="RoyalVista Jobs Placeholder"
                     style="display:flex; align-items:center; justify-content:center; background:#1a1a1a; color: #444; font-weight:600;">

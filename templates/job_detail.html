@@ -9,7 +9,7 @@
     <meta property="og:title" content="{{ job.title }} | RoyalVista Tech Solutions">
     <meta property="og:description" content="Check out this opportunity! Click to read more and apply.">
     <meta property="og:image"
-        content="{{ url_for('static', filename=job.image_url, _external=True) if job.image_url else url_for('static', filename='img/default_job.png', _external=True) }}">
+        content="{% if job.image_url %}{% if job.image_url.startswith('http') %}{{ job.image_url }}{% else %}{{ url_for('static', filename=job.image_url, _external=True) }}{% endif %}{% else %}{{ url_for('static', filename='img/default_job.png', _external=True) }}{% endif %}">
     <meta property="og:url" content="{{ request.url }}">
     <meta property="og:type" content="website">
     <link
@@ -190,7 +190,11 @@
             </header>
 
             {% if job.image_url %}
-            <img src="{{ url_for('static', filename=job.image_url) }}" class="job-banner" alt="{{ job.title }}">
+                {% if job.image_url.startswith('http') %}
+                <img src="{{ job.image_url }}" class="job-banner" alt="{{ job.title }}">
+                {% else %}
+                <img src="{{ url_for('static', filename=job.image_url) }}" class="job-banner" alt="{{ job.title }}">
+                {% endif %}
             {% endif %}
 
             <div class="job-description">

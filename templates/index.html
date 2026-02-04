@@ -191,13 +191,16 @@
 
                 <div class="portfolio-grid" id="portfolioGrid">
                     {% for item in portfolio %}
-                    <div class="portfolio-item card" data-category="{{ item.category }}">
+                    <div class="portfolio-item card" data-category="{{ item.category }}" data-link="{{ item.external_link or '' }}">
                         <div class="portfolio-img">
                             {% if item.image_url %}
-                            <img src="{{ url_for('static', filename=item.image_url or 'assets/images/portfolio-web.png') }}"
-                                alt="{{ item.title }}" loading="lazy">
+                                {% if item.image_url.startswith('http') %}
+                                <img src="{{ item.image_url }}" alt="{{ item.title }}" loading="lazy">
+                                {% else %}
+                                <img src="{{ url_for('static', filename=item.image_url) }}" alt="{{ item.title }}" loading="lazy">
+                                {% endif %}
                             {% else %}
-                            <div class="placeholder-img">{{ item.category.upper() }}</div>
+                                <div class="placeholder-img">{{ item.category.upper() }}</div>
                             {% endif %}
                             <span class="sample-badge">Sample Work</span>
                         </div>

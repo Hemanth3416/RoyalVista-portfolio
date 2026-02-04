@@ -219,12 +219,29 @@ document.addEventListener('DOMContentLoaded', () => {
                 const img = item.querySelector('img');
                 const title = item.querySelector('h3') ? item.querySelector('h3').innerText : 'Project';
                 const category = item.getAttribute('data-category') || 'Design';
+                const link = item.getAttribute('data-link') || '';
 
                 if (modalTitle) modalTitle.innerText = title;
                 if (modalCategory) modalCategory.innerText = category;
                 if (modalMedia) {
                     modalMedia.innerHTML = '';
-                    if (img) {
+                    
+                    // Video Detection Logic
+                    let videoEmbed = null;
+                    if (link.includes('youtube.com/watch?v=')) {
+                        const vid = link.split('v=')[1].split('&')[0];
+                        videoEmbed = `https://www.youtube.com/embed/${vid}`;
+                    } else if (link.includes('youtu.be/')) {
+                        const vid = link.split('be/')[1].split('?')[0];
+                        videoEmbed = `https://www.youtube.com/embed/${vid}`;
+                    } else if (link.includes('vimeo.com/')) {
+                        const vid = link.split('vimeo.com/')[1].split('?')[0];
+                        videoEmbed = `https://player.vimeo.com/video/${vid}`;
+                    }
+
+                    if (videoEmbed) {
+                        modalMedia.innerHTML = `<iframe src="${videoEmbed}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen style="width:100%; height:100%; aspect-ratio:16/9;"></iframe>`;
+                    } else if (img) {
                         const newImg = document.createElement('img');
                         newImg.src = img.src;
                         newImg.alt = title;
