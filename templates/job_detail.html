@@ -217,7 +217,11 @@
                 <p style="margin:0; font-size:0.8rem; color:var(--text-muted);">Interested in this role?</p>
                 <h4 style="margin:0; color:#fff; font-size:1rem;">Don't miss the deadline</h4>
             </div>
-            <a href="{{ job.external_link }}" target="_blank" class="btn btn-primary"
+            {% set apply_url = job.external_link %}
+            {% if '@' in apply_url and 'http' not in apply_url.lower() and 'mailto:' not in apply_url.lower() %}
+                {% set apply_url = 'mailto:' ~ apply_url %}
+            {% endif %}
+            <a href="{{ apply_url }}" target="_blank" class="btn btn-primary"
                 style="padding: 0.75rem 2rem; font-size: 0.95rem;">Apply
                 Now <i class="fas fa-external-link-alt"></i></a>
         </div>

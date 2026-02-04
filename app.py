@@ -269,21 +269,95 @@ def init_db():
                     
                     db.session.commit()
 
-                    # Auto-Restore from Cloud (Only if local is empty)
-                    from models import PortfolioItem, Job
-                    if PortfolioItem.query.first() is None and Job.query.first() is None:
-                        print("Syncing with Google Sheets in background...")
+                    # Auto-Restore from Cloud (Comprehensive)
+                    from models import PortfolioItem, Job, Order, Ticket, Service, JobCategory
+                    if PortfolioItem.query.first() is None and db.session.execute(db.text("SELECT count(*) FROM \"user\"")).scalar() <= 1:
+                        print("Syncing Full Database from Google Sheets in background...")
                         from utils import fetch_from_google_sheets
+                        
+                        # Restore Users
+                        u_data = fetch_from_google_sheets('User')
+                        for u in u_data:
+                            email = u.get('email')
+                            if email and not User.query.filter_by(email=email).first():
+                                try:
+                                    db.session.add(User(
+                                        username=u.get('username'), 
+                                        email=email, 
+                                        password=u.get('password'), 
+                                        phone_number=u.get('phone_number'),
+                                        is_admin=True if str(u.get('is_admin')).lower() == 'true' else False,
+                                        custom_user_id=u.get('custom_user_id'),
+                                        role=u.get('role', 'Client'),
+                                        permissions=u.get('permissions')
+                                    ))
+                                except: pass
+                        
+                        # Restore Orders
+                        o_data = fetch_from_google_sheets('Order')
+                        for o in o_data:
+                            oid = o.get('custom_order_id')
+                            if oid:
+                                try:
+                                    db.session.add(Order(
+                                        custom_order_id=oid,
+                                        user_id=o.get('user_id'),
+                                        service_name=o.get('service_name'),
+                                        details=o.get('details'),
+                                        status=o.get('status', 'Submitted'),
+                                        output_url=o.get('output_url'),
+                                        output_type=o.get('output_type')
+                                    ))
+                                except: pass
+
+                        # Restore Tickets
+                        t_data = fetch_from_google_sheets('Ticket')
+                        for t in t_data:
+                            tid = t.get('custom_ticket_id')
+                            if tid:
+                                try:
+                                    db.session.add(Ticket(
+                                        custom_ticket_id=tid,
+                                        user_id=t.get('user_id'),
+                                        order_id=t.get('order_id'),
+                                        subject=t.get('subject'),
+                                        description=t.get('description'),
+                                        status=t.get('status', 'Open'),
+                                        priority=t.get('priority', 'Medium')
+                                    ))
+                                except: pass
+
                         # Restore Portfolio
                         p_data = fetch_from_google_sheets('Portfolio')
                         for p in p_data:
-                            if p.get('Title'): db.session.add(PortfolioItem(title=p.get('Title'), client_name=p.get('Client'), category=p.get('Category', 'Others'), image_url=p.get('Image URL'), active=True))
+                            if p.get('title'): 
+                                db.session.add(PortfolioItem(
+                                    title=p.get('title'), 
+                                    client_name=p.get('client_name'), 
+                                    category=p.get('category', 'Others'), 
+                                    image_url=p.get('image_url'), 
+                                    video_url=p.get('video_url'),
+                                    external_link=p.get('external_link'),
+                                    active=True if str(p.get('active')).lower() == 'true' else False
+                                ))
+                        
                         # Restore Jobs
                         j_data = fetch_from_google_sheets('Job')
                         for j in j_data:
-                             if j.get('Title'): db.session.add(Job(title=j.get('Title'), description="Restored from cloud...", categories=j.get('Categories'), eligible_years=j.get('Eligible Years'), status=j.get('Status', 'Posted')))
+                             if j.get('title'): 
+                                 db.session.add(Job(
+                                     title=j.get('title'), 
+                                     description=j.get('description', 'Restored...'), 
+                                     categories=j.get('categories'), 
+                                     eligible_years=j.get('eligible_years'), 
+                                     image_url=j.get('image_url'),
+                                     external_link=j.get('external_link'),
+                                     status=j.get('status', 'Posted'),
+                                     share_count=int(j.get('share_count', 0)) if str(j.get('share_count')).isdigit() else 0
+                                 ))
                         
                         db.session.commit()
+                        print("Full background data sync complete.")
                     
                     # Start Scheduler now that DB is ready
                     if not scheduler.running:
@@ -1514,8 +1588,6 @@ def admin_job_action():
         is_img = ext in ['jpg', 'jpeg', 'png', 'webp', 'gif']
         
         if is_img:
-            # Apply Watermark
-            apply_watermark(file_path)
             # Upload to ImgBB
             direct_link = upload_to_imgbb(file_path)
             if direct_link:

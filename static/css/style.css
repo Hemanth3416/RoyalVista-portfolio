@@ -946,8 +946,7 @@ ul {
 
 /* Watermark Implementation (Diagonal Repeating Pattern) */
 .portfolio-img::after,
-.modal-media::after,
-.job-img-container::after {
+.modal-media::after {
     content: "RoyalVista Tech Solutions";
     position: absolute;
     top: 50%;
