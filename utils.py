@@ -184,7 +184,9 @@ def send_notification_email(to_email, subject, body_html):
 
     context = ssl.create_default_context()
     try:
-        with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=context) as server:
+        # Use Port 587 with STARTTLS for better compatibility on Render
+        with smtplib.SMTP("smtp.gmail.com", 587, timeout=10) as server:
+            server.starttls(context=context)
             server.login(sender_email, password)
             server.sendmail(sender_email, to_email, message.as_string())
         print(f"Email sent successfully to {to_email}")

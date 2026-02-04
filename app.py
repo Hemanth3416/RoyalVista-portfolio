@@ -569,12 +569,27 @@ def google_callback():
                 )
                 db.session.add(user)
                 db.session.commit()
-                # Audit & Notification (Threaded to prevent blocking redirections)
-                log_audit(db, user.id, "User Registered via Google")
-                add_notification(user.id, "Welcome to RoyalVista!", 
-                                 "Your account has been created via Google.", 
-                                 link=url_for('dashboard'), 
-                                 template='emails/welcome.html')
+                
+                # Prepare sync data for background thread
+                sync_data = {
+                    'id': user.id, 'username': user.username, 'email': user.email,
+                    'phone_number': user.phone_number, 'password': user.password,
+                    'google_id': user.google_id, 'custom_user_id': user.custom_user_id,
+                    'is_admin': user.is_admin, 'is_active_status': user.is_active_status,
+                    'is_subscribed': user.is_subscribed, 'created_at': user.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+                    'permissions': user.permissions, 'role': user.role, 'profile_edited_count': user.profile_edited_count
+                }
+                threading.Thread(target=sync_to_google_sheets, args=(sync_data, 'User')).start()
+
+                # Audit & Notification (Threaded to prevent blocking redirections/502s)
+                def background_notify():
+                    log_audit(db, user.id, "User Registered via Google")
+                    add_notification(user.id, "Welcome to RoyalVista!", 
+                                     "Your account has been created via Google.", 
+                                     link=url_for('dashboard'), 
+                                     template='emails/welcome.html')
+                
+                threading.Thread(target=background_notify).start()
                 
                 flash(f'Welcome to RoyalVista, {name}! Your account has been created.', 'success')
                 session['new_google_user'] = True
