@@ -53,7 +53,6 @@ def rebuild():
     scopes = ['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive']
     creds_file = 'credentials.json'
     sheet_name = 'RoyalVista_DB'
-    db_path = 'instance/site.db'
     
     if not os.path.exists(creds_file):
         print("Error: credentials.json not found.")
@@ -67,41 +66,27 @@ def rebuild():
     except gspread.SpreadsheetNotFound:
         print(f"Error: Spreadsheet '{sheet_name}' not found.")
         return
-
-    conn = sqlite3.connect(db_path)
-    cur = conn.cursor()
-
-    for category, headers in SYNC_CONFIG.items():
-        ws_name = SHEET_MAPPING.get(category)
-        if not ws_name: continue
         
-        sql_table = SQL_MAPPING.get(category)
-        if not sql_table: continue
-
-        print(f"Syncing {ws_name}...")
+    for category, ws_name in SHEET_MAPPING.items():
+        if category not in SYNC_CONFIG: continue
+        headers = SYNC_CONFIG[category]
+        
+        print(f"Resetting sheet: {ws_name}...")
         try:
+            # Try to get the worksheet
             worksheet = spreadsheet.worksheet(ws_name)
-            worksheet.clear()
+            # Delete it
+            spreadsheet.del_worksheet(worksheet)
+            print(f"  Deleted existing '{ws_name}'")
         except gspread.WorksheetNotFound:
-            worksheet = spreadsheet.add_worksheet(title=ws_name, rows=1000, cols=len(headers))
-        
+            pass
+            
+        # Create fresh
+        worksheet = spreadsheet.add_worksheet(title=ws_name, rows=1000, cols=len(headers) + 2)
         worksheet.append_row(headers)
-        
-        try:
-            query = f"SELECT {', '.join(headers)} FROM {sql_table}"
-            cur.execute(query)
-            rows = cur.fetchall()
-            formatted_rows = [[str(val) if val is not None else "" for val in r] for r in rows]
-            if formatted_rows:
-                worksheet.append_rows(formatted_rows)
-                print(f"  Inserted {len(formatted_rows)} rows.")
-            else:
-                print("  No data found.")
-        except Exception as e:
-            print(f"  SQL Error for {category}: {e}")
+        print(f"  Created '{ws_name}' with headers: {headers}")
 
-    conn.close()
-    print("\nBackup Complete! All tables are now synced to Google Sheets.")
+    print("\nComplete! All sheets have been wiped and re-initialized with correct headers.")
 
 if __name__ == "__main__":
     rebuild()
