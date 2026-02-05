@@ -54,18 +54,15 @@ csrf = CSRFProtect(app)
 def healthz():
     return "OK", 200
 
-# BETTER DATA MANAGEMENT:
-# If DATABASE_URL is set (Cloud SQL), use it. Otherwise, use local SQLite.
+# DATABASE CONNECTION
 db_uri = os.environ.get('DATABASE_URL')
 if db_uri:
     db_uri = db_uri.strip().strip('"').strip("'")
-    # Fix the standard protocol for SQLAlchemy with Postgres
-    if db_uri.startswith("postgres://") and not db_uri.startswith("postgresql://"):
+    if "://" not in db_uri:
+        print("⚠️ DATABASE_URL detected but is not a valid URL (missing ://). Using SQLite.", flush=True)
+        db_uri = "sqlite:///site.db"
+    elif db_uri.startswith("postgres://"):
         db_uri = db_uri.replace("postgres://", "postgresql://", 1)
-    
-    # Hide password in logs for security
-    logged_uri = re.sub(r':([^@]+)@', ':****@', db_uri)
-    print(f"DATABASE_URL detected: {logged_uri}", flush=True)
 
 app.config['SQLALCHEMY_DATABASE_URI'] = db_uri or 'sqlite:///site.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -74,7 +71,16 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
-db.init_app(app)
+try:
+    # Validate URI before initializing
+    from sqlalchemy.engine.url import make_url
+    make_url(app.config['SQLALCHEMY_DATABASE_URI'])
+    db.init_app(app)
+except Exception as e:
+    print(f"❌ DATABASE ERROR: Could not use DATABASE_URL. Reason: {e}", flush=True)
+    print("🔄 FALLBACK: Reverting to local SQLite database...", flush=True)
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///site.db'
+    db.init_app(app)
 bcrypt = Bcrypt(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
