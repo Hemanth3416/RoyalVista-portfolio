@@ -372,14 +372,15 @@ def init_db():
                         # Restore Jobs
                         j_data = fetch_from_google_sheets('Job')
                         for j in j_data:
-                             if j.get('title'): 
+                             title = j.get('title')
+                             if title: 
                                  db.session.add(Job(
-                                     title=j.get('title'), 
-                                     description=j.get('description', 'Restored...'), 
-                                     categories=j.get('categories'), 
-                                     eligible_years=j.get('eligible_years'), 
+                                     title=title, 
+                                     description=j.get('description') or 'Restored from backup...', 
+                                     categories=j.get('categories') or 'Others', 
+                                     eligible_years=str(j.get('eligible_years', 'Any')), 
                                      image_url=j.get('image_url'),
-                                     external_link=j.get('external_link'),
+                                     external_link=j.get('external_link') or '#',
                                      status=j.get('status', 'Posted'),
                                      share_count=int(j.get('share_count', 0)) if str(j.get('share_count')).isdigit() else 0
                                  ))
@@ -1311,10 +1312,10 @@ def restore_from_sheets():
     from utils import fetch_from_google_sheets
     count = 0
     
-    def clean_bool(val):
+    def clean_bool(val, default=False):
+        if val is None or val == "": return default
         if isinstance(val, bool): return val
-        if str(val).lower() in ['true', '1', 'yes']: return True
-        return False
+        return str(val).lower() in ['true', '1', 'yes', 'y']
 
     # Restore Users
     user_data = fetch_from_google_sheets('User')
@@ -1328,10 +1329,10 @@ def restore_from_sheets():
                 phone_number=str(u.get('phone_number', '')),
                 google_id=str(u.get('google_id', '')) if u.get('google_id') else None,
                 custom_user_id=str(u.get('custom_user_id', gen_user_id())),
-                is_admin=clean_bool(u.get('is_admin')),
-                role=str(u.get('role', 'Client')),
-                permissions=str(u.get('permissions', '[]')),
-                is_active_status=clean_bool(u.get('is_active_status', True))
+                is_admin=clean_bool(u.get('is_admin') if 'is_admin' in u else u.get('Is Admin', False)),
+                role=str(u.get('role') or u.get('Role', 'Client')),
+                permissions=str(u.get('permissions') or u.get('Permissions', '[]')),
+                is_active_status=clean_bool(u.get('is_active_status') if 'is_active_status' in u else u.get('Active', True))
             )
             db.session.add(new_user)
             count += 1
@@ -1340,14 +1341,16 @@ def restore_from_sheets():
     # Restore Portfolio
     p_data = fetch_from_google_sheets('Portfolio')
     for p in p_data:
-        title = str(p.get('Title', '')).strip()
+        title = str(p.get('title') or p.get('Title') or '').strip()
         if title and not PortfolioItem.query.filter_by(title=title).first():
             new_p = PortfolioItem(
                 title=title,
-                client_name=str(p.get('Client', '')),
-                category=str(p.get('Category', 'Others')),
-                image_url=str(p.get('Image URL', '')),
-                active=clean_bool(p.get('Status', True))
+                client_name=str(p.get('client_name') or p.get('Client') or ''),
+                category=str(p.get('category') or p.get('Category') or 'Others'),
+                image_url=str(p.get('image_url') or p.get('Image URL') or ''),
+                video_url=str(p.get('video_url') or p.get('Video URL') or ''),
+                external_link=str(p.get('external_link') or p.get('External Link') or ''),
+                active=clean_bool(p.get('active') if 'active' in p else p.get('Status', True))
             )
             db.session.add(new_p)
             count += 1
@@ -1356,15 +1359,17 @@ def restore_from_sheets():
     # Restore Jobs
     j_data = fetch_from_google_sheets('Job')
     for j in j_data:
-        title = str(j.get('Title', '')).strip()
+        title = str(j.get('title') or j.get('Title') or '').strip()
         if title and not Job.query.filter_by(title=title).first():
             new_j = Job(
                 title=title,
-                description="Restored from backup...",
-                categories=str(j.get('Categories', '')),
-                eligible_years=str(j.get('Eligible Years', '')),
-                status=str(j.get('Status', 'Posted')),
-                share_count=int(j.get('Share Count', 0)) if str(j.get('Share Count')).isdigit() else 0
+                description=str(j.get('description') or j.get('Description') or 'Restored from backup...'),
+                categories=str(j.get('categories') or j.get('Categories') or 'Fresher'),
+                eligible_years=str(j.get('eligible_years') or j.get('Eligible Years') or 'Any'),
+                image_url=str(j.get('image_url') or j.get('Image URL') or ''),
+                external_link=str(j.get('external_link') or j.get('External Link') or '#'),
+                status=str(j.get('status') or j.get('Status', 'Posted')),
+                share_count=int(j.get('share_count', 0)) if str(j.get('share_count') or j.get('Share Count')).isdigit() else 0
             )
             db.session.add(new_j)
             count += 1
@@ -1373,16 +1378,17 @@ def restore_from_sheets():
     # Restore Orders
     o_data = fetch_from_google_sheets('Order')
     for o in o_data:
-        oid = str(o.get('Order ID', '')).strip()
+        oid = str(o.get('custom_order_id') or o.get('Order ID') or '').strip()
         if oid and not Order.query.filter_by(custom_order_id=oid).first():
-            client = User.query.filter_by(email=str(o.get('Client Email', '')).strip()).first()
+            client_search = str(o.get('user_id') or o.get('Client Email') or '').strip()
+            client = User.query.filter((User.id == client_search) | (User.email == client_search)).first()
             if client:
                 new_o = Order(
                     custom_order_id=oid,
                     user_id=client.id,
-                    service_name=str(o.get('Service', 'Service')),
-                    details=str(o.get('Details', 'Details')),
-                    status=str(o.get('Status', 'Submitted'))
+                    service_name=str(o.get('service_name') or o.get('Service') or 'Service'),
+                    details=str(o.get('details') or o.get('Details') or 'Details'),
+                    status=str(o.get('status') or o.get('Status', 'Submitted'))
                 )
                 db.session.add(new_o)
                 count += 1
@@ -1391,17 +1397,18 @@ def restore_from_sheets():
     # Restore Tickets
     t_data = fetch_from_google_sheets('Ticket')
     for t in t_data:
-        tid = str(t.get('Ticket ID', '')).strip()
+        tid = str(t.get('custom_ticket_id') or t.get('Ticket ID') or '').strip()
         if tid and not SupportTicket.query.filter_by(custom_ticket_id=tid).first():
-            user = User.query.filter_by(email=str(t.get('User Email', '')).strip()).first()
+            user_search = str(t.get('user_id') or t.get('User Email') or '').strip()
+            user = User.query.filter((User.id == user_search) | (User.email == user_search)).first()
             if user:
                 new_t = SupportTicket(
                     custom_ticket_id=tid,
                     user_id=user.id,
-                    subject=str(t.get('Subject', 'Support Ticket')),
-                    priority=str(t.get('Priority', 'Medium')),
-                    status=str(t.get('Status', 'Open')),
-                    description="Restored from cloud..."
+                    subject=str(t.get('subject') or t.get('Subject') or 'Support Ticket'),
+                    priority=str(t.get('priority') or t.get('Priority') or 'Medium'),
+                    status=str(t.get('status') or t.get('Status', 'Open')),
+                    description=str(t.get('description') or t.get('Description') or 'Restored from cloud...')
                 )
                 db.session.add(new_t)
                 count += 1
