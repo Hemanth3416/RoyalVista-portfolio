@@ -306,3 +306,47 @@ def backup_db(db_path='instance/site.db', backup_dir='backups'):
     if len(backups) > 7:
         for old in backups[:-7]: os.remove(os.path.join(backup_dir, old))
     return True
+
+def delete_from_google_sheets(item_id, category='Portfolio'):
+    """Deletes a row from Google Sheets based on ID."""
+    creds_json = os.environ.get('GOOGLE_SHEETS_CREDS_JSON')
+    credentials_file = 'credentials.json'
+    sheet_name = os.environ.get('GOOGLE_SHEET_NAME', 'RoyalVista_DB')
+    
+    sheet_mapping = {
+        'User': 'Users', 'Order': 'Orders', 'Lead': 'Leads', 'Ticket': 'Tickets',
+        'Portfolio': 'Portfolio', 'Job': 'Jobs', 'ProfileRequest': 'Profile Requests',
+        'Notification': 'Notifications', 'Email': 'Emails', 'Subscription': 'Subscriptions',
+        'Service': 'Services', 'JobCategory': 'Job Categories', 'Log': 'Audit Logs',
+        'Timeline': 'Order Timelines', 'SiteContent': 'Site Content'
+    }
+    
+    if category not in sheet_mapping: return False
+    
+    ws_name = sheet_mapping[category]
+    
+    try:
+        import gspread
+        from google.oauth2.service_account import Credentials
+        scopes = ['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive']
+        
+        if creds_json:
+            creds = Credentials.from_service_account_info(json.loads(creds_json), scopes=scopes)
+        else:
+            if not os.path.exists(credentials_file): return False
+            creds = Credentials.from_service_account_file(credentials_file, scopes=scopes)
+            
+        client = gspread.authorize(creds)
+        spreadsheet = client.open(sheet_name)
+        worksheet = spreadsheet.worksheet(ws_name)
+        
+        # Find cell with the ID
+        # Assuming ID is in the first column for Portfolio
+        cell = worksheet.find(str(item_id), in_column=1)
+        if cell:
+            worksheet.delete_rows(cell.row)
+            return True
+        return False
+    except Exception as e:
+        print(f"Error deleting from Sheets ({category}): {e}")
+        return False

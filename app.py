@@ -18,7 +18,7 @@ from models import db, User, Service, Order, SiteContent, OrderTimeline, Portfol
 from datetime import datetime, timezone, timedelta
 from werkzeug.utils import secure_filename
 from flask_wtf.csrf import CSRFProtect
-from utils import generate_invoice_pdf, sync_to_google_sheets, send_notification_email, log_audit, backup_db, apply_watermark
+from utils import generate_invoice_pdf, sync_to_google_sheets, delete_from_google_sheets, send_notification_email, log_audit, backup_db, apply_watermark
 from apscheduler.schedulers.background import BackgroundScheduler
 import pytz
 import json
@@ -1389,6 +1389,10 @@ def delete_portfolio(item_id):
             
     db.session.delete(item)
     db.session.commit()
+    
+    # Sync Deletion to Sheets
+    threading.Thread(target=delete_from_google_sheets, args=(item_id, 'Portfolio')).start()
+    
     flash('Portfolio item deleted.', 'info')
     return redirect(url_for('dashboard'))
 
@@ -1663,8 +1667,13 @@ def admin_job_action():
         jid = request.form.get('job_id')
         job = Job.query.get(jid)
         if job:
+            jid_val = job.id
             db.session.delete(job)
             db.session.commit()
+            
+            # Sync Deletion to Sheets
+            threading.Thread(target=delete_from_google_sheets, args=(jid_val, 'Job')).start()
+            
             flash('Job deleted successfully.', 'info')
             return redirect(url_for('dashboard', _anchor='tab-jobs'))
     else:
