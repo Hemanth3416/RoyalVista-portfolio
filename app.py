@@ -57,19 +57,20 @@ def healthz():
 # DATABASE CONNECTION
 db_uri = os.environ.get('DATABASE_URL')
 if db_uri:
-    # Aggressively find the actual URL starting with postgres:// or postgresql://
-    # This handles "psql 'url'", "DATABASE_URL=url", etc.
+    # Aggressively extract URL starting with postgresql:// or postgres://
     match = re.search(r'(postgresql?://[^\s\'"]+)', db_uri)
     if match:
         db_uri = match.group(1)
-        # Fix protocol for SQLAlchemy
+        # Fix for SQLAlchemy Protocol
         if db_uri.startswith("postgres://"):
             db_uri = db_uri.replace("postgres://", "postgresql://", 1)
+        
+        # Safe Log (mask password only)
+        # Regex: find :password@ and replace with :****@
+        safe_log = re.sub(r'(://[^:]+:)([^@]+)(@)', r'\1****\3', db_uri)
+        print(f"📡 DATABASE_URL detected: {safe_log}", flush=True)
     else:
-        # Fallback to cleaning if regex fails
-        db_uri = db_uri.strip().strip('"').strip("'")
-        if db_uri.startswith("psql "):
-            db_uri = db_uri.replace("psql ", "", 1).strip().strip('"').strip("'")
+        print("⚠️ DATABASE_URL detected but no valid PostgreSQL scheme found. Using default.", flush=True)
 
 app.config['SQLALCHEMY_DATABASE_URI'] = db_uri or 'sqlite:///site.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -79,13 +80,14 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
 try:
-    # Validate URI before initializing
+    # Check if URI is valid
     from sqlalchemy.engine.url import make_url
     make_url(app.config['SQLALCHEMY_DATABASE_URI'])
     db.init_app(app)
+    if app.config['SQLALCHEMY_DATABASE_URI'].startswith('postgresql'):
+        print("✅ Connected to: PostgreSQL Pool", flush=True)
 except Exception as e:
-    print(f"❌ DATABASE ERROR: Could not use DATABASE_URL. Reason: {e}", flush=True)
-    print("🔄 FALLBACK: Reverting to local SQLite database...", flush=True)
+    print(f"❌ DATABASE ERROR: Fallback to SQLite. Reason: {e}", flush=True)
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///site.db'
     db.init_app(app)
 bcrypt = Bcrypt(app)
@@ -284,13 +286,11 @@ def init_db():
                         ])
                     
                     if not JobCategory.query.first():
-                        from models import JobCategory
                         db.session.add_all([JobCategory(name=n) for n in ['2024','2025','2026','Fresher','Experienced','Hackathons']])
                     
                     db.session.commit()
 
                     # Auto-Restore from Cloud (Comprehensive)
-                    from models import PortfolioItem, Job, Order, Ticket
                     
                     # Logic: If major tables are empty, we likely lost the SQLite file (Render restart)
                     needs_restore = PortfolioItem.query.first() is None or Job.query.first() is None
