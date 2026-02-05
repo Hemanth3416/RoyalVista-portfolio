@@ -59,12 +59,13 @@ def healthz():
 db_uri = os.environ.get('DATABASE_URL')
 if db_uri:
     db_uri = db_uri.strip().strip('"').strip("'")
-    if db_uri.startswith("postgres://"):
+    # Fix the standard protocol for SQLAlchemy with Postgres
+    if db_uri.startswith("postgres://") and not db_uri.startswith("postgresql://"):
         db_uri = db_uri.replace("postgres://", "postgresql://", 1)
     
     # Hide password in logs for security
     logged_uri = re.sub(r':([^@]+)@', ':****@', db_uri)
-    print(f"DATABASE_URL detected: {logged_uri}")
+    print(f"DATABASE_URL detected: {logged_uri}", flush=True)
 
 app.config['SQLALCHEMY_DATABASE_URI'] = db_uri or 'sqlite:///site.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
