@@ -107,10 +107,11 @@ def sync_to_google_sheets(data, category='User'):
         
         if unique_val and col_idx:
             try:
-                # Limit check to last 100 rows for performance
-                vals = worksheet.col_values(col_idx)
-                if str(unique_val) in vals:
-                    # Update existing row logic would go here, currently we just skip
+                # Limit check to all rows for accuracy
+                cell = worksheet.find(str(unique_val), in_column=col_idx)
+                if cell:
+                    # Update row
+                    worksheet.update(f"A{cell.row}", [row])
                     return True
             except: pass
 
