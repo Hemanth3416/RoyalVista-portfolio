@@ -28,4 +28,4 @@ ENV PORT=8080
 EXPOSE 8080
 
 # Command to run the application using Gunicorn
-CMD exec gunicorn --bind :$PORT --workers 1 --threads 8 --timeout 0 app:app
+CMD exec gunicorn --bind :$PORT --workers 1 --threads 4 --timeout 0 app:app

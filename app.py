@@ -406,6 +406,7 @@ def perform_cloud_restore():
         print(f"Error restoring Tickets: {e}")
         db.session.rollback()
 
+    db.session.remove()
     return count
 
 @login_manager.user_loader
