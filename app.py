@@ -227,6 +227,186 @@ def add_notification(user_id, title, message, link=None, template=None, email_su
             body = f"<h2>{title}</h2><p>{message}</p><a href='{link if link else '#'}'>View Details</a>"
             send_notification_email(user.email, f"RoyalVista Alert: {title}", body)
 
+def perform_cloud_restore():
+    """Comprehensive restoration from Google Sheets with cross-referencing."""
+    from models import (User, Service, PortfolioItem, Job, JobCategory, Order, 
+                        SupportTicket, OrderTimeline, SiteContent, JobSubscription, Notification)
+    from utils import fetch_from_google_sheets
+    
+    count = 0
+    
+    def clean_bool(val, default=False):
+        if val is None or val == "": return default
+        if isinstance(val, bool): return val
+        return str(val).lower() in ['true', '1', 'yes', 'y']
+
+    # 1. SiteContent
+    try:
+        sc_data = fetch_from_google_sheets('SiteContent')
+        for sc in sc_data:
+            k = sc.get('key')
+            if k and not SiteContent.query.filter_by(key=k).first():
+                db.session.add(SiteContent(key=k, value=sc.get('value')))
+                count += 1
+        db.session.commit()
+    except Exception as e: 
+        print(f"Error restoring SiteContent: {e}")
+        db.session.rollback()
+
+    # 2. Users
+    try:
+        u_data = fetch_from_google_sheets('User')
+        for u in u_data:
+            email = str(u.get('email') or u.get('Email') or u.get('User Email') or '').strip()
+            if email and not User.query.filter_by(email=email).first():
+                db.session.add(User(
+                    username=u.get('username') or u.get('Username') or 'User',
+                    email=email,
+                    password=u.get('password') or u.get('Password') or '',
+                    phone_number=u.get('phone_number') or u.get('Phone Number') or '',
+                    google_id=u.get('google_id') if u.get('google_id') else None,
+                    custom_user_id=u.get('custom_user_id') or u.get('Custom User ID') or gen_user_id(),
+                    is_admin=clean_bool(u.get('is_admin') or u.get('Is Admin')),
+                    role=u.get('role') or u.get('Role') or 'Client',
+                    permissions=str(u.get('permissions') or u.get('Permissions') or '[]'),
+                    is_active_status=clean_bool(u.get('is_active_status') or u.get('Active'), True)
+                ))
+                count += 1
+        db.session.commit()
+    except Exception as e: 
+        print(f"Error restoring Users: {e}")
+        db.session.rollback()
+
+    # 3. Services
+    try:
+        s_data = fetch_from_google_sheets('Service')
+        for s in s_data:
+            t = s.get('title') or s.get('Title')
+            if t and not Service.query.filter_by(title=t).first():
+                db.session.add(Service(
+                    title=t,
+                    description=s.get('description') or s.get('Description') or '',
+                    icon_class=s.get('icon_class') or s.get('Icon Class') or 'fas fa-cog',
+                    active=clean_bool(s.get('active') or s.get('Active'), True)
+                ))
+                count += 1
+        db.session.commit()
+    except Exception as e: 
+        print(f"Error restoring Services: {e}")
+        db.session.rollback()
+    
+    # 4. Job Categories
+    try:
+        jc_data = fetch_from_google_sheets('JobCategory')
+        for jc in jc_data:
+            n = jc.get('name') or jc.get('Name')
+            if n and not JobCategory.query.filter_by(name=n).first():
+                db.session.add(JobCategory(name=n))
+                count += 1
+        db.session.commit()
+    except Exception as e: 
+        print(f"Error restoring Job Categories: {e}")
+        db.session.rollback()
+
+    # 5. Jobs
+    try:
+        j_data = fetch_from_google_sheets('Job')
+        for j in j_data:
+            t = j.get('title') or j.get('Title')
+            if t and not Job.query.filter_by(title=t).first():
+                db.session.add(Job(
+                    title=t,
+                    description=j.get('description') or j.get('Description') or 'Restored...',
+                    categories=j.get('categories') or j.get('Categories') or '',
+                    eligible_years=j.get('eligible_years') or j.get('Eligible Years') or 'Any',
+                    image_url=j.get('image_url') or j.get('Image URL'),
+                    external_link=j.get('external_link') or j.get('External Link') or '#',
+                    status=j.get('status') or j.get('Status', 'Posted'),
+                    share_count=int(j.get('share_count') or j.get('Share Count', 0)) if str(j.get('share_count') or j.get('Share Count')).isdigit() else 0
+                ))
+                count += 1
+        db.session.commit()
+    except Exception as e: 
+        print(f"Error restoring Jobs: {e}")
+        db.session.rollback()
+
+    # 6. Portfolio
+    try:
+        p_data = fetch_from_google_sheets('Portfolio')
+        for p in p_data:
+            t = p.get('title') or p.get('Title')
+            if t and not PortfolioItem.query.filter_by(title=t).first():
+                db.session.add(PortfolioItem(
+                    title=t,
+                    client_name=p.get('client_name') or p.get('Client') or '',
+                    category=p.get('category') or p.get('Category') or 'Others',
+                    image_url=p.get('image_url') or p.get('Image URL') or '',
+                    video_url=p.get('video_url') or p.get('Video URL') or '',
+                    external_link=p.get('external_link') or p.get('External Link') or '',
+                    active=clean_bool(p.get('active') or p.get('Status'), True)
+                ))
+                count += 1
+        db.session.commit()
+    except Exception as e: 
+        print(f"Error restoring Portfolio: {e}")
+        db.session.rollback()
+
+    # 7. Orders
+    try:
+        o_data = fetch_from_google_sheets('Order')
+        for o in o_data:
+            oid = str(o.get('custom_order_id') or o.get('Order ID') or '').strip()
+            if oid and not Order.query.filter_by(custom_order_id=oid).first():
+                u_search = str(o.get('user_id') or o.get('User ID') or o.get('Client Email') or '').strip()
+                user = User.query.filter((User.id == (int(u_search) if u_search.isdigit() else -1)) | (User.email == u_search) | (User.custom_user_id == u_search)).first()
+                if user:
+                    s_id = o.get('service_id')
+                    if not s_id:
+                        s_name = o.get('service_name') or o.get('Service')
+                        svc = Service.query.filter_by(title=s_name).first()
+                        if svc: s_id = svc.id
+
+                    db.session.add(Order(
+                        custom_order_id=oid,
+                        user_id=user.id,
+                        service_id=int(s_id) if str(s_id).isdigit() else None,
+                        service_name=o.get('service_name') or o.get('Service') or 'Service',
+                        details=o.get('details') or o.get('Details') or 'Details',
+                        status=o.get('status') or o.get('Status', 'Submitted'),
+                        output_url=o.get('output_url') or o.get('Output URL'),
+                        output_type=o.get('output_type') or o.get('Output Type')
+                    ))
+                    count += 1
+        db.session.commit()
+    except Exception as e: 
+        print(f"Error restoring Orders: {e}")
+        db.session.rollback()
+
+    # 8. Tickets
+    try:
+        t_data = fetch_from_google_sheets('Ticket')
+        for t in t_data:
+            tid = str(t.get('custom_ticket_id') or t.get('Ticket ID') or '').strip()
+            if tid and not SupportTicket.query.filter_by(custom_ticket_id=tid).first():
+                u_search = str(t.get('user_id') or t.get('User Email') or '').strip()
+                user = User.query.filter((User.id == (int(u_search) if u_search.isdigit() else -1)) | (User.email == u_search) | (User.custom_user_id == u_search)).first()
+                if user:
+                    db.session.add(SupportTicket(
+                        custom_ticket_id=tid,
+                        user_id=user.id,
+                        subject=t.get('subject') or t.get('Subject') or 'Support',
+                        description=t.get('description') or t.get('Description') or 'Restored...',
+                        priority=t.get('priority') or t.get('Priority') or 'Medium',
+                        status=t.get('status') or t.get('Status', 'Open')
+                    ))
+                    count += 1
+        db.session.commit()
+    except Exception as e: 
+        print(f"Error restoring Tickets: {e}")
+        db.session.rollback()
+
+    return count
+
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
@@ -251,143 +431,47 @@ def init_db():
         def run_maintenance(app_obj):
             with app_obj.app_context():
                 try:
-                    from models import User, Service, JobCategory, PortfolioItem, Job, Order, SupportTicket
-                    from utils import fetch_from_google_sheets
+                    from models import User, Service, JobCategory, PortfolioItem, Job
                     
-                    # Generic check for columns
-                    from sqlalchemy import inspect
-                    inspector = inspect(db.engine)
-                    columns = [c['name'] for c in inspector.get_columns('user')]
-                    
-                    for col, dtype in [
-                        ("is_subscribed", "BOOLEAN DEFAULT 1"), ("created_at", "DATETIME"), 
-                        ("permissions", "TEXT"), ("role", "VARCHAR(20) DEFAULT 'Client'"), 
-                        ("is_active_status", "BOOLEAN DEFAULT 1"), ("profile_edited_count", "INTEGER DEFAULT 0"), 
-                        ("custom_user_id", "VARCHAR(20)")
-                    ]:
-                        if col not in columns:
-                            try:
-                                db.session.execute(db.text(f"ALTER TABLE \"user\" ADD COLUMN {col} {dtype}"))
-                                db.session.commit()
-                            except: db.session.rollback()
-
-                    # Data Integrity & Seeding
-                    if not User.query.filter_by(is_admin=True).first():
+                    # 1. Seeding
+                    if not User.query.filter_by(role='Super Admin').first():
                         hashed_pw = bcrypt.generate_password_hash('RoyalVista@2026').decode('utf-8')
                         db.session.add(User(username='RoyalVista Admin', email='royalvistatechsolutions@gmail.com', password=hashed_pw, is_admin=True, role='Super Admin', permissions=json.dumps(['jobs', 'newsletters', 'chatbot', 'users']), phone_number="+1234567890"))
                     
                     if not Service.query.first():
                         db.session.add_all([
-                            Service(title='Web Design', description='Professional.', icon_class='fas fa-desktop'),
-                            Service(title='Logo Design', description='Expert.', icon_class='fas fa-pen-nib'),
-                            Service(title='Video Editing', description='High-quality.', icon_class='fas fa-video'),
-                            Service(title='Thumbnails', description='Effective.', icon_class='fas fa-image'),
-                            Service(title='Posters & Ads', description='Impactful.', icon_class='fas fa-ad'),
-                            Service(title='Wedding Invitations', description='Elegant.', icon_class='fas fa-heart'),
-                            Service(title='SEO Services', description='Visibility.', icon_class='fas fa-search'),
-                            Service(title='Social Media Marketing', description='Presence.', icon_class='fas fa-share-alt'),
-                            Service(title='Others', description='Custom.', icon_class='fas fa-ellipsis-h')
+                            Service(title='Web Design', description='Professional website design and development.', icon_class='fas fa-desktop'),
+                            Service(title='Logo Design', description='Unique and memorable logo creation.', icon_class='fas fa-pen-nib'),
+                            Service(title='Video Editing', description='High-quality video editing for various platforms.', icon_class='fas fa-video'),
+                            Service(title='Thumbnails', description='Eye-catching thumbnails for videos and content.', icon_class='fas fa-image'),
+                            Service(title='Posters & Ads', description='Creative poster and advertisement designs.', icon_class='fas fa-ad'),
+                            Service(title='Wedding Invitations', description='Elegant and personalized wedding invitation designs.', icon_class='fas fa-heart'),
+                            Service(title='SEO Services', description='Search Engine Optimization to improve online visibility.', icon_class='fas fa-search'),
+                            Service(title='Social Media Marketing', description='Strategies and content for effective social media presence.', icon_class='fas fa-share-alt'),
+                            Service(title='Others', description='Custom design and digital solutions tailored to your needs.', icon_class='fas fa-ellipsis-h')
                         ])
                     
                     if not JobCategory.query.first():
-                        db.session.add_all([JobCategory(name=n) for n in ['2024','2025','2026','Fresher','Experienced','Hackathons']])
+                        db.session.add_all([
+                            JobCategory(name='Web Development'),
+                            JobCategory(name='Graphic Design'),
+                            JobCategory(name='Video Production'),
+                            JobCategory(name='Digital Marketing'),
+                            JobCategory(name='Content Creation'),
+                            JobCategory(name='UI/UX Design'),
+                            JobCategory(name='Mobile App Development'),
+                            JobCategory(name='Data Entry'),
+                            JobCategory(name='Customer Service'),
+                            JobCategory(name='Other')
+                        ])
                     
                     db.session.commit()
 
-                    # Auto-Restore from Cloud (Comprehensive)
-                    
-                    # Logic: If major tables are empty, we likely lost the SQLite file (Render restart)
-                    needs_restore = PortfolioItem.query.first() is None or Job.query.first() is None
-                    
-                    if needs_restore:
-                        print("CRITICAL: Local database appears empty. Starting Cloud Restore from Google Sheets...")
-                        from utils import fetch_from_google_sheets
-                        
-                        # Restore Users
-                        u_data = fetch_from_google_sheets('User')
-                        for u in u_data:
-                            email = u.get('email')
-                            if email and not User.query.filter_by(email=email).first():
-                                try:
-                                    db.session.add(User(
-                                        username=u.get('username'), 
-                                        email=email, 
-                                        password=u.get('password'), 
-                                        phone_number=u.get('phone_number'),
-                                        is_admin=True if str(u.get('is_admin')).lower() == 'true' else False,
-                                        custom_user_id=u.get('custom_user_id'),
-                                        role=u.get('role', 'Client'),
-                                        permissions=u.get('permissions')
-                                    ))
-                                except: pass
-                        
-                        # Restore Orders
-                        o_data = fetch_from_google_sheets('Order')
-                        for o in o_data:
-                            oid = o.get('custom_order_id')
-                            if oid:
-                                try:
-                                    db.session.add(Order(
-                                        custom_order_id=oid,
-                                        user_id=o.get('user_id'),
-                                        service_name=o.get('service_name'),
-                                        details=o.get('details'),
-                                        status=o.get('status', 'Submitted'),
-                                        output_url=o.get('output_url'),
-                                        output_type=o.get('output_type')
-                                    ))
-                                except: pass
-
-                        # Restore Tickets
-                        t_data = fetch_from_google_sheets('Ticket')
-                        for t in t_data:
-                            tid = t.get('custom_ticket_id')
-                            if tid:
-                                try:
-                                    db.session.add(SupportTicket(
-                                        custom_ticket_id=tid,
-                                        user_id=t.get('user_id'),
-                                        order_id=t.get('order_id'),
-                                        subject=t.get('subject'),
-                                        description=t.get('description'),
-                                        status=t.get('status', 'Open'),
-                                        priority=t.get('priority', 'Medium')
-                                    ))
-                                except: pass
-
-                        # Restore Portfolio
-                        p_data = fetch_from_google_sheets('Portfolio')
-                        for p in p_data:
-                            if p.get('title'): 
-                                db.session.add(PortfolioItem(
-                                    title=p.get('title'), 
-                                    client_name=p.get('client_name'), 
-                                    category=p.get('category', 'Others'), 
-                                    image_url=p.get('image_url'), 
-                                    video_url=p.get('video_url'),
-                                    external_link=p.get('external_link'),
-                                    active=True if str(p.get('active')).lower() == 'true' else False
-                                ))
-                        
-                        # Restore Jobs
-                        j_data = fetch_from_google_sheets('Job')
-                        for j in j_data:
-                             title = j.get('title')
-                             if title: 
-                                 db.session.add(Job(
-                                     title=title, 
-                                     description=j.get('description') or 'Restored from backup...', 
-                                     categories=j.get('categories') or 'Others', 
-                                     eligible_years=str(j.get('eligible_years', 'Any')), 
-                                     image_url=j.get('image_url'),
-                                     external_link=j.get('external_link') or '#',
-                                     status=j.get('status', 'Posted'),
-                                     share_count=int(j.get('share_count', 0)) if str(j.get('share_count')).isdigit() else 0
-                                 ))
-                        
-                        db.session.commit()
-                        print(f"✅ Cloud Restore SUCCESS: Local database is now populated.")
-                        print("Background data sync complete.")
+                    # 2. Cloud Restore
+                    if PortfolioItem.query.first() is None or Job.query.first() is None:
+                        print("CRITICAL: Local database appears empty. Starting Cloud Restore...")
+                        c = perform_cloud_restore()
+                        print(f"✅ Cloud Restore SUCCESS: {c} items recovered.")
                     
                     # Start Scheduler now that DB is ready
                     if not scheduler.running:
@@ -1052,7 +1136,7 @@ def dashboard():
                     sync_data = {
                         'id': order.id,
                         'custom_order_id': cust_id, 
-                        'user_id': current_user.id, 
+                        'user_id': current_user.custom_user_id, 
                         'service_name': service.title, 
                         'details': details,
                         'status': 'Submitted'
@@ -1109,8 +1193,8 @@ def dashboard():
                 sync_data = {
                     'id': ticket.id,
                     'custom_ticket_id': ticket.custom_ticket_id,
-                    'user_id': current_user.id,
-                    'order_id': order_id,
+                    'user_id': current_user.custom_user_id,
+                    'order_id': ticket.order.custom_order_id if ticket.order else None,
                     'subject': subject,
                     'description': desc,
                     'priority': priority,
@@ -1304,116 +1388,11 @@ def trigger_backup():
         flash('Database backup failed. Check credentials.', 'danger')
     return redirect(url_for('dashboard', _anchor='tab-settings'))
 
-@app.route("/admin/restore")
+@app.route('/admin/restore')
 @login_required
 def restore_from_sheets():
     if not current_user.is_admin: return redirect(url_for('dashboard'))
-    
-    from utils import fetch_from_google_sheets
-    count = 0
-    
-    def clean_bool(val, default=False):
-        if val is None or val == "": return default
-        if isinstance(val, bool): return val
-        return str(val).lower() in ['true', '1', 'yes', 'y']
-
-    # Restore Users
-    user_data = fetch_from_google_sheets('User')
-    for u in user_data:
-        email = str(u.get('email', '')).strip()
-        if email and not User.query.filter_by(email=email).first():
-            new_user = User(
-                username=str(u.get('username', 'User')),
-                email=email,
-                password=str(u.get('password', '')),
-                phone_number=str(u.get('phone_number', '')),
-                google_id=str(u.get('google_id', '')) if u.get('google_id') else None,
-                custom_user_id=str(u.get('custom_user_id', gen_user_id())),
-                is_admin=clean_bool(u.get('is_admin') if 'is_admin' in u else u.get('Is Admin', False)),
-                role=str(u.get('role') or u.get('Role', 'Client')),
-                permissions=str(u.get('permissions') or u.get('Permissions', '[]')),
-                is_active_status=clean_bool(u.get('is_active_status') if 'is_active_status' in u else u.get('Active', True))
-            )
-            db.session.add(new_user)
-            count += 1
-    db.session.commit()
-            
-    # Restore Portfolio
-    p_data = fetch_from_google_sheets('Portfolio')
-    for p in p_data:
-        title = str(p.get('title') or p.get('Title') or '').strip()
-        if title and not PortfolioItem.query.filter_by(title=title).first():
-            new_p = PortfolioItem(
-                title=title,
-                client_name=str(p.get('client_name') or p.get('Client') or ''),
-                category=str(p.get('category') or p.get('Category') or 'Others'),
-                image_url=str(p.get('image_url') or p.get('Image URL') or ''),
-                video_url=str(p.get('video_url') or p.get('Video URL') or ''),
-                external_link=str(p.get('external_link') or p.get('External Link') or ''),
-                active=clean_bool(p.get('active') if 'active' in p else p.get('Status', True))
-            )
-            db.session.add(new_p)
-            count += 1
-    db.session.commit()
-            
-    # Restore Jobs
-    j_data = fetch_from_google_sheets('Job')
-    for j in j_data:
-        title = str(j.get('title') or j.get('Title') or '').strip()
-        if title and not Job.query.filter_by(title=title).first():
-            new_j = Job(
-                title=title,
-                description=str(j.get('description') or j.get('Description') or 'Restored from backup...'),
-                categories=str(j.get('categories') or j.get('Categories') or 'Fresher'),
-                eligible_years=str(j.get('eligible_years') or j.get('Eligible Years') or 'Any'),
-                image_url=str(j.get('image_url') or j.get('Image URL') or ''),
-                external_link=str(j.get('external_link') or j.get('External Link') or '#'),
-                status=str(j.get('status') or j.get('Status', 'Posted')),
-                share_count=int(j.get('share_count', 0)) if str(j.get('share_count') or j.get('Share Count')).isdigit() else 0
-            )
-            db.session.add(new_j)
-            count += 1
-    db.session.commit()
-    
-    # Restore Orders
-    o_data = fetch_from_google_sheets('Order')
-    for o in o_data:
-        oid = str(o.get('custom_order_id') or o.get('Order ID') or '').strip()
-        if oid and not Order.query.filter_by(custom_order_id=oid).first():
-            client_search = str(o.get('user_id') or o.get('Client Email') or '').strip()
-            client = User.query.filter((User.id == client_search) | (User.email == client_search)).first()
-            if client:
-                new_o = Order(
-                    custom_order_id=oid,
-                    user_id=client.id,
-                    service_name=str(o.get('service_name') or o.get('Service') or 'Service'),
-                    details=str(o.get('details') or o.get('Details') or 'Details'),
-                    status=str(o.get('status') or o.get('Status', 'Submitted'))
-                )
-                db.session.add(new_o)
-                count += 1
-    db.session.commit()
-
-    # Restore Tickets
-    t_data = fetch_from_google_sheets('Ticket')
-    for t in t_data:
-        tid = str(t.get('custom_ticket_id') or t.get('Ticket ID') or '').strip()
-        if tid and not SupportTicket.query.filter_by(custom_ticket_id=tid).first():
-            user_search = str(t.get('user_id') or t.get('User Email') or '').strip()
-            user = User.query.filter((User.id == user_search) | (User.email == user_search)).first()
-            if user:
-                new_t = SupportTicket(
-                    custom_ticket_id=tid,
-                    user_id=user.id,
-                    subject=str(t.get('subject') or t.get('Subject') or 'Support Ticket'),
-                    priority=str(t.get('priority') or t.get('Priority') or 'Medium'),
-                    status=str(t.get('status') or t.get('Status', 'Open')),
-                    description=str(t.get('description') or t.get('Description') or 'Restored from cloud...')
-                )
-                db.session.add(new_t)
-                count += 1
-    db.session.commit()
-
+    count = perform_cloud_restore()
     flash(f'Restoration complete. {count} items recovered from Google Sheets.', 'success')
     return redirect(url_for('dashboard', _anchor='tab-managed'))
 
