@@ -57,21 +57,19 @@ def healthz():
 # DATABASE CONNECTION
 db_uri = os.environ.get('DATABASE_URL')
 if db_uri:
-    # 1. Clean the string from common copy-paste errors
-    db_uri = db_uri.strip().strip('"').strip("'")
-    
-    # 2. If the user pasted the "psql" command by mistake, strip it
-    if db_uri.startswith("psql "):
-        db_uri = db_uri.replace("psql ", "", 1).strip().strip('"').strip("'")
-    
-    # 3. Basic Validation
-    if "://" not in db_uri:
-        print(f"⚠️ DATABASE_URL detected but format is invalid (missing ://). String starts with: {db_uri[:10]}...", flush=True)
-        db_uri = "sqlite:///site.db"
-    else:
-        # 4. Fix standard protocol for SQLAlchemy
+    # Aggressively find the actual URL starting with postgres:// or postgresql://
+    # This handles "psql 'url'", "DATABASE_URL=url", etc.
+    match = re.search(r'(postgresql?://[^\s\'"]+)', db_uri)
+    if match:
+        db_uri = match.group(1)
+        # Fix protocol for SQLAlchemy
         if db_uri.startswith("postgres://"):
             db_uri = db_uri.replace("postgres://", "postgresql://", 1)
+    else:
+        # Fallback to cleaning if regex fails
+        db_uri = db_uri.strip().strip('"').strip("'")
+        if db_uri.startswith("psql "):
+            db_uri = db_uri.replace("psql ", "", 1).strip().strip('"').strip("'")
 
 app.config['SQLALCHEMY_DATABASE_URI'] = db_uri or 'sqlite:///site.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
