@@ -209,11 +209,12 @@ def add_notification(user_id, title, message, link=None, template=None, email_su
     user = User.query.get(user_id)
     # Sync to Sheets
     sync_data = {
-        'id': notif.id,
-        'user_id': user.custom_user_id if user else "Unknown",
-        'title': title,
-        'message': message,
-        'is_read': notif.is_read
+        'ID': notif.id,
+        'User ID': user.custom_user_id if user else "Unknown",
+        'Title': title,
+        'Message': message,
+        'Status': 'Unread' if not notif.is_read else 'Read',
+        'Timestamp': notif.created_at.strftime('%Y-%m-%d %H:%M:%S')
     }
     threading.Thread(target=sync_to_google_sheets, args=(sync_data, 'Notification')).start()
     if user:
@@ -753,12 +754,13 @@ def update_profile():
         
         # Sync to Sheets
         sync_data = {
-            'id': req.id,
-            'user_id': req.user_id,
-            'new_name': req.new_username,
-            'new_phone': req.new_phone,
-            'description': req.description,
-            'status': req.status
+            'ID': req.id,
+            'User ID': current_user.custom_user_id,
+            'New Name': req.new_username,
+            'New Phone': req.new_phone,
+            'Reason': req.description,
+            'Status': req.status,
+            'Timestamp': req.created_at.strftime('%Y-%m-%d %H:%M:%S')
         }
         threading.Thread(target=sync_to_google_sheets, args=(sync_data, 'ProfileRequest')).start()
         
@@ -834,19 +836,18 @@ def contact():
         
         # Standardized Sync Data
         data = {
-            'id': new_lead.id,
-            'full_name': name,
-            'email': email,
-            'phone': phone,
-            'service': service,
-            'message': msg
+            'Full Name': name,
+            'Email': email,
+            'Phone': phone,
+            'Service': service,
+            'Message': msg,
+            'Type': 'Contact Form',
+            'Timestamp': new_lead.created_at.strftime('%Y-%m-%d %H:%M:%S')
         }
         # Background Sync to Sheets
         threading.Thread(target=sync_to_google_sheets, args=(data, 'Lead')).start()
     except Exception as e:
         print(f"Lead Storage Error: {e}")
-        # Even if DB fails, sheets might work, or vice versa. 
-        # But we want them parallel.
     
     # Email User
     send_email_styled(email, f"We've Received Your Inquiry - {name}", 'emails/lead_confirmation.html', 
@@ -911,6 +912,19 @@ def dashboard():
                 item = PortfolioItem(title=title, client_name=client, category=cat, image_url=image_url)
                 db.session.add(item)
                 db.session.commit()
+                
+                # Sync to Sheets
+                sync_data = {
+                    'ID': item.id,
+                    'Title': title,
+                    'Client': client,
+                    'Category': cat,
+                    'Image URL': image_url,
+                    'Status': 'Active',
+                    'Timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                }
+                threading.Thread(target=sync_to_google_sheets, args=(sync_data, 'Portfolio')).start()
+                
                 log_audit(db, current_user.id, "Portfolio Item Added", f"Item: {title}")
                 flash('Portfolio item updated category-wise.', 'success')
 
@@ -1001,6 +1015,20 @@ def dashboard():
                                     external_link=output_url if output_url else (file_url if file_url else '#')
                                 )
                                 db.session.add(p_item)
+                                db.session.commit() # Commit to get ID
+                                
+                                # Sync to Sheets
+                                sync_data = {
+                                    'ID': p_item.id,
+                                    'Title': p_title,
+                                    'Client': order.client.username,
+                                    'Category': p_cat,
+                                    'Image URL': p_image,
+                                    'Status': 'Active',
+                                    'Timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                                }
+                                threading.Thread(target=sync_to_google_sheets, args=(sync_data, 'Portfolio')).start()
+                                
                                 flash('Project automatically added to Portfolio!', 'success')
                     
                     note_text = f"Status updated to {status}."
@@ -1134,12 +1162,14 @@ def dashboard():
                     
                     # Background Sync to Sheets
                     sync_data = {
-                        'id': order.id,
-                        'custom_order_id': cust_id, 
-                        'user_id': current_user.custom_user_id, 
-                        'service_name': service.title, 
-                        'details': details,
-                        'status': 'Submitted'
+                        'Order ID': cust_id, 
+                        'Client Email': current_user.email,
+                        'Service': service.title, 
+                        'Details': details,
+                        'User ID': current_user.custom_user_id,
+                        'Phone': current_user.phone_number,
+                        'Status': 'Submitted',
+                        'Timestamp': order.created_at.strftime('%Y-%m-%d %H:%M:%S')
                     }
                     threading.Thread(target=sync_to_google_sheets, args=(sync_data, 'Order')).start()
                 except Exception as e:
@@ -1191,14 +1221,13 @@ def dashboard():
                 
                 # Parallel Sync to Sheets
                 sync_data = {
-                    'id': ticket.id,
-                    'custom_ticket_id': ticket.custom_ticket_id,
-                    'user_id': current_user.custom_user_id,
-                    'order_id': ticket.order.custom_order_id if ticket.order else None,
-                    'subject': subject,
-                    'description': desc,
-                    'priority': priority,
-                    'status': 'Open'
+                    'Ticket ID': ticket.custom_ticket_id,
+                    'User Email': current_user.email,
+                    'Order ID': ticket.order.custom_order_id if ticket.order else 'N/A',
+                    'Subject': subject,
+                    'Priority': priority,
+                    'Status': 'Open',
+                    'Timestamp': ticket.created_at.strftime('%Y-%m-%d %H:%M:%S')
                 }
                 threading.Thread(target=sync_to_google_sheets, args=(sync_data, 'Ticket')).start()
             except Exception as e:
@@ -1565,10 +1594,12 @@ def job_subscribe():
             db.session.commit() # Commit each to get ID or just commit after loop
             
             # Sync to Sheets
+            # Sync to Sheets
             sync_data = {
-                'id': sub.id,
-                'user_id': user.custom_user_id if user else "Guest",
-                'category_id': sub.category_id
+                'ID': sub.id,
+                'User ID': user.custom_user_id if user else "Guest",
+                'Category ID': sub.category_id,
+                'Timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             }
             threading.Thread(target=sync_to_google_sheets, args=(sync_data, 'Subscription')).start()
             
@@ -1673,15 +1704,13 @@ def admin_job_action():
     # Sync to Sheets
     if action_type in ['create', 'edit'] and job:
         sync_data = {
-            'id': job.id,
-            'title': job.title,
-            'description': job.description,
-            'categories': job.categories,
-            'eligible_years': job.eligible_years,
-            'image_url': job.image_url,
-            'external_link': job.external_link,
-            'status': job.status,
-            'share_count': job.share_count
+            'ID': job.id,
+            'Title': job.title,
+            'Categories': job.categories,
+            'Eligible Years': job.eligible_years,
+            'Status': job.status,
+            'Share Count': job.share_count,
+            'Timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         }
         threading.Thread(target=sync_to_google_sheets, args=(sync_data, 'Job')).start()
 

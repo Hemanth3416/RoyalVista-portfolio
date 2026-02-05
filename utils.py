@@ -30,17 +30,17 @@ except ImportError:
 SYNC_CONFIG = {
     'User': ['id', 'username', 'email', 'phone_number', 'password', 'google_id', 'custom_user_id', 'is_admin', 'is_active_status', 'is_subscribed', 'created_at', 'permissions', 'role', 'profile_edited_count'],
     'Service': ['id', 'title', 'description', 'icon_class', 'active'],
-    'Portfolio': ['id', 'title', 'client_name', 'category', 'image_url', 'video_url', 'external_link', 'active'],
-    'Job': ['id', 'title', 'description', 'categories', 'eligible_years', 'image_url', 'external_link', 'status', 'scheduled_time', 'share_count', 'created_at', 'posted_at'],
+    'Portfolio': ['ID', 'Title', 'Client', 'Category', 'Image URL', 'Status', 'Timestamp'],
+    'Job': ['ID', 'Title', 'Categories', 'Eligible Years', 'Status', 'Share Count', 'Timestamp'],
     'JobCategory': ['id', 'name'],
-    'Order': ['id', 'custom_order_id', 'user_id', 'service_id', 'service_name', 'details', 'status', 'output_url', 'output_type', 'created_at'],
-    'Ticket': ['id', 'custom_ticket_id', 'user_id', 'order_id', 'subject', 'description', 'priority', 'status', 'created_at'],
-    'Lead': ['id', 'full_name', 'email', 'phone', 'service', 'message', 'created_at'],
-    'Notification': ['id', 'user_id', 'title', 'message', 'is_read', 'link', 'created_at'],
-    'ProfileRequest': ['id', 'user_id', 'new_username', 'new_phone', 'description', 'status', 'created_at'],
-    'Log': ['id', 'user_id', 'action', 'details', 'ip_address', 'timestamp'],
-    'Email': ['id', 'subject', 'body', 'recipients', 'scheduled_time', 'status', 'created_at', 'sent_at'],
-    'Subscription': ['id', 'user_id', 'category_id'],
+    'Order': ['Order ID', 'Client Email', 'Service', 'Details', 'User ID', 'Phone', 'Status', 'Timestamp'],
+    'Ticket': ['Ticket ID', 'User Email', 'Order ID', 'Subject', 'Priority', 'Status', 'Timestamp'],
+    'Lead': ['Full Name', 'Email', 'Phone', 'Service', 'Message', 'Type', 'Timestamp'],
+    'Notification': ['ID', 'User ID', 'Title', 'Message', 'Status', 'Timestamp'],
+    'ProfileRequest': ['ID', 'User ID', 'New Name', 'New Phone', 'Reason', 'Status', 'Timestamp'],
+    'Log': ['Log ID', 'User ID', 'Action', 'Details', 'IP', 'Timestamp'],
+    'Email': ['ID', 'Subject', 'Status', 'Scheduled At', 'Sent At', 'Timestamp'],
+    'Subscription': ['ID', 'User ID', 'Category ID', 'Timestamp'],
     'Timeline': ['id', 'order_id', 'action_type', 'performed_by', 'timestamp', 'note', 'file_url', 'file_type'],
     'SiteContent': ['key', 'value']
 }
@@ -100,7 +100,7 @@ def sync_to_google_sheets(data, category='User'):
         col_idx = None
         if category == 'User':
             unique_val = data.get('email'); col_idx = 3 # column C
-        elif category in ['Order', 'Ticket', 'Lead', 'Portfolio', 'Job', 'Service', 'JobCategory', 'SiteContent']:
+        elif category in ['Order', 'Ticket', 'Portfolio', 'Job', 'Service', 'JobCategory', 'SiteContent', 'Log']:
             # Use the first column if it's an ID or 'key'
             unique_val = str(data.get(headers[0]))
             col_idx = 1
@@ -197,11 +197,12 @@ def log_audit(db, user_id, action, details=None, ip=None):
         if u: prof_id = u.custom_user_id
 
     sync_data = {
-        'id': log.id,
-        'user_id': prof_id,
-        'action': action,
-        'details': details,
-        'ip_address': ip
+        'Log ID': log.id,
+        'User ID': prof_id,
+        'Action': action,
+        'Details': details,
+        'IP': ip,
+        'Timestamp': log.timestamp.strftime('%Y-%m-%d %H:%M:%S')
     }
     import threading
     threading.Thread(target=sync_to_google_sheets, args=(sync_data, 'Log')).start()
