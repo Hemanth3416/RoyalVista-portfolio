@@ -270,9 +270,13 @@ def init_db():
                     db.session.commit()
 
                     # Auto-Restore from Cloud (Comprehensive)
-                    from models import PortfolioItem, Job, Order, Ticket, Service, JobCategory
-                    if PortfolioItem.query.first() is None and db.session.execute(db.text("SELECT count(*) FROM \"user\"")).scalar() <= 1:
-                        print("Syncing Full Database from Google Sheets in background...")
+                    from models import PortfolioItem, Job, Order, Ticket
+                    
+                    # Logic: If major tables are empty, we likely lost the SQLite file (Render restart)
+                    needs_restore = PortfolioItem.query.first() is None or Job.query.first() is None
+                    
+                    if needs_restore:
+                        print("CRITICAL: Local database appears empty. Starting Cloud Restore from Google Sheets...")
                         from utils import fetch_from_google_sheets
                         
                         # Restore Users
@@ -357,7 +361,8 @@ def init_db():
                                  ))
                         
                         db.session.commit()
-                        print("Full background data sync complete.")
+                        print(f"✅ Cloud Restore SUCCESS: Local database is now populated.")
+                        print("Background data sync complete.")
                     
                     # Start Scheduler now that DB is ready
                     if not scheduler.running:
