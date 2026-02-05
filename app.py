@@ -18,7 +18,7 @@ from models import db, User, Service, Order, SiteContent, OrderTimeline, Portfol
 from datetime import datetime, timezone, timedelta
 from werkzeug.utils import secure_filename
 from flask_wtf.csrf import CSRFProtect
-from utils import generate_invoice_pdf, sync_to_google_sheets, delete_from_google_sheets, send_notification_email, log_audit, backup_db, apply_watermark
+from utils import generate_invoice_pdf, sync_to_google_sheets, delete_from_google_sheets, reset_google_sheets, send_notification_email, log_audit, backup_db, apply_watermark
 from apscheduler.schedulers.background import BackgroundScheduler
 import pytz
 import json
@@ -1428,6 +1428,78 @@ def restore_from_sheets():
     count = perform_cloud_restore()
     flash(f'Restoration complete. {count} items recovered from Google Sheets.', 'success')
     return redirect(url_for('dashboard', _anchor='tab-managed'))
+
+@app.route('/admin/system/hard-reset')
+@login_required
+def system_hard_reset():
+    if current_user.role != 'Super Admin':
+        flash('Only Super Admins can perform a hard reset.', 'danger')
+        return redirect(url_for('dashboard'))
+        
+    try:
+        # 1. Drop and Recreate DB
+        db.drop_all()
+        db.create_all()
+        
+        # 2. Seed Data
+        hashed_pw = bcrypt.generate_password_hash('RoyalVista@2026').decode('utf-8')
+        admin = User(
+            username='RoyalVista Admin', 
+            email='royalvistatechsolutions@gmail.com', 
+            password=hashed_pw, 
+            is_admin=True, 
+            role='Super Admin', 
+            permissions=json.dumps(['jobs', 'newsletters', 'chatbot', 'users']), 
+            phone_number="+1234567890",
+            custom_user_id="RVTSADMIN001"
+        )
+        db.session.add(admin)
+        
+        db.session.add_all([
+            Service(title='Web Design', description='Professional website design and development.', icon_class='fas fa-desktop'),
+            Service(title='Logo Design', description='Unique and memorable logo creation.', icon_class='fas fa-pen-nib'),
+            Service(title='Video Editing', description='High-quality video editing for various platforms.', icon_class='fas fa-video'),
+            Service(title='Thumbnails', description='Eye-catching thumbnails for videos and content.', icon_class='fas fa-image'),
+            Service(title='Posters & Ads', description='Creative poster and advertisement designs.', icon_class='fas fa-ad'),
+            Service(title='Wedding Invitations', description='Elegant and personalized wedding invitation designs.', icon_class='fas fa-heart'),
+            Service(title='SEO Services', description='Search Engine Optimization to improve online visibility.', icon_class='fas fa-search'),
+            Service(title='Social Media Marketing', description='Strategies and content for effective social media presence.', icon_class='fas fa-share-alt'),
+            Service(title='Others', description='Custom design and digital solutions tailored to your needs.', icon_class='fas fa-ellipsis-h')
+        ])
+
+        db.session.add_all([
+            JobCategory(name='Web Development'),
+            JobCategory(name='Graphic Design'),
+            JobCategory(name='Video Production'),
+            JobCategory(name='Digital Marketing'),
+            JobCategory(name='Content Creation'),
+            JobCategory(name='UI/UX Design'),
+            JobCategory(name='Mobile App Development'),
+            JobCategory(name='Data Entry'),
+            JobCategory(name='Customer Service'),
+            JobCategory(name='Other')
+        ])
+        
+        db.session.commit()
+        
+        # 3. Wipe Google Sheets
+        threading.Thread(target=reset_google_sheets).start()
+        
+        # 4. Clean Local Files (Optional but good for completeness)
+        folder = app.config['UPLOAD_FOLDER']
+        if os.path.exists(folder):
+            for f in os.listdir(folder):
+                try: os.remove(os.path.join(folder, f))
+                except: pass
+                
+        flash('SYSTEM RESET COMPLETE. Database and Sheets have been wiped.', 'warning')
+        return redirect(url_for('login'))
+        
+    except Exception as e:
+        print(f"Hard Reset Failed: {e}")
+        db.session.rollback()
+        flash(f'Hard Reset Failed: {e}', 'danger')
+        return redirect(url_for('dashboard'))
 
 @app.route("/admin/newsletter/preview", methods=['POST'])
 @login_required

@@ -350,3 +350,49 @@ def delete_from_google_sheets(item_id, category='Portfolio'):
     except Exception as e:
         print(f"Error deleting from Sheets ({category}): {e}")
         return False
+
+def reset_google_sheets():
+    """Wipes all data from Google Sheets and recreates headers."""
+    creds_json = os.environ.get('GOOGLE_SHEETS_CREDS_JSON')
+    credentials_file = 'credentials.json'
+    sheet_name = os.environ.get('GOOGLE_SHEET_NAME', 'RoyalVista_DB')
+    
+    sheet_mapping = {
+        'User': 'Users', 'Order': 'Orders', 'Lead': 'Leads', 'Ticket': 'Tickets',
+        'Portfolio': 'Portfolio', 'Job': 'Jobs', 'ProfileRequest': 'Profile Requests',
+        'Notification': 'Notifications', 'Email': 'Emails', 'Subscription': 'Subscriptions',
+        'Service': 'Services', 'JobCategory': 'Job Categories', 'Log': 'Audit Logs',
+        'Timeline': 'Order Timelines', 'SiteContent': 'Site Content'
+    }
+    
+    try:
+        import gspread
+        from google.oauth2.service_account import Credentials
+        scopes = ['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive']
+        
+        if creds_json:
+            creds = Credentials.from_service_account_info(json.loads(creds_json), scopes=scopes)
+        else:
+            if not os.path.exists(credentials_file): return False
+            creds = Credentials.from_service_account_file(credentials_file, scopes=scopes)
+            
+        client = gspread.authorize(creds)
+        spreadsheet = client.open(sheet_name)
+        
+        for category, ws_name in sheet_mapping.items():
+            if category not in SYNC_CONFIG: continue
+            headers = SYNC_CONFIG[category]
+            
+            try:
+                worksheet = spreadsheet.worksheet(ws_name)
+                spreadsheet.del_worksheet(worksheet)
+            except gspread.WorksheetNotFound:
+                pass
+                
+            worksheet = spreadsheet.add_worksheet(title=ws_name, rows=1000, cols=len(headers) + 2)
+            worksheet.append_row(headers)
+            
+        return True
+    except Exception as e:
+        print(f"Sheet Reset Error: {e}")
+        return False
