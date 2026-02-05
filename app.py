@@ -57,12 +57,21 @@ def healthz():
 # DATABASE CONNECTION
 db_uri = os.environ.get('DATABASE_URL')
 if db_uri:
+    # 1. Clean the string from common copy-paste errors
     db_uri = db_uri.strip().strip('"').strip("'")
+    
+    # 2. If the user pasted the "psql" command by mistake, strip it
+    if db_uri.startswith("psql "):
+        db_uri = db_uri.replace("psql ", "", 1).strip().strip('"').strip("'")
+    
+    # 3. Basic Validation
     if "://" not in db_uri:
-        print("⚠️ DATABASE_URL detected but is not a valid URL (missing ://). Using SQLite.", flush=True)
+        print(f"⚠️ DATABASE_URL detected but format is invalid (missing ://). String starts with: {db_uri[:10]}...", flush=True)
         db_uri = "sqlite:///site.db"
-    elif db_uri.startswith("postgres://"):
-        db_uri = db_uri.replace("postgres://", "postgresql://", 1)
+    else:
+        # 4. Fix standard protocol for SQLAlchemy
+        if db_uri.startswith("postgres://"):
+            db_uri = db_uri.replace("postgres://", "postgresql://", 1)
 
 app.config['SQLALCHEMY_DATABASE_URI'] = db_uri or 'sqlite:///site.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
