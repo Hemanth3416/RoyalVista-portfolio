@@ -1,0 +1,460 @@
+/* Jobs Page UX & Accessibility Fixes */
+
+/* Prevent long tags from breaking layout */
+.tag {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 150px;
+    display: inline-block;
+}
+
+/* Prevent long job titles from breaking card height */
+.job-title {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    min-height: 3.2rem;
+}
+
+/* SEO-friendly job title links */
+.job-title a {
+    color: inherit;
+    text-decoration: none;
+    display: block;
+}
+
+.job-title a:hover {
+    color: var(--primary-color);
+}
+
+/* Mobile Filter Button Improvements */
+@media (max-width: 600px) {
+    .search-filter-bar form {
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+        gap: 0.75rem;
+    }
+
+    .search-input,
+    .filter-select,
+    .search-filter-bar .btn-primary {
+        width: 100% !important;
+        max-width: 100%;
+    }
+}
+
+/* Dashboard Portfolio & Job Responsive Fixes */
+
+/* Modal Responsiveness */
+@media (max-width: 768px) {
+
+    /* Force grids to stack */
+    div[style*="grid-template-columns: 1fr 1fr"],
+    div[style*="display: grid; grid-template-columns: 1.5fr 1fr"] {
+        grid-template-columns: 1fr !important;
+    }
+
+    /* Modal Fixes */
+    .edit-form-overlay .card {
+        width: 95% !important;
+        max-width: 450px;
+        max-height: 85vh;
+        overflow-y: auto;
+    }
+
+    /* Table Scroll Fix */
+    .table-responsive {
+        display: block;
+        width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    /* Portfolio Action Buttons */
+    .portfolio-list td:last-child {
+        display: flex;
+        gap: 8px;
+        white-space: nowrap;
+        flex-wrap: wrap;
+    }
+
+    .portfolio-list .btn-small {
+        font-size: 0.7rem;
+        padding: 0.3rem 0.6rem;
+    }
+}
+
+/* Table to Card Transformation for Mobile */
+@media (max-width: 600px) {
+
+    .portfolio-list table,
+    .portfolio-list thead,
+    .portfolio-list tbody,
+    .portfolio-list th,
+    .portfolio-list td,
+    .portfolio-list tr {
+        display: block;
+    }
+
+    .portfolio-list thead tr {
+        position: absolute;
+        top: -9999px;
+        left: -9999px;
+    }
+
+    .portfolio-list tr {
+        margin-bottom: 1rem;
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        padding: 1rem;
+        background: var(--card-bg);
+    }
+
+    .portfolio-list td {
+        border: none;
+        position: relative;
+        padding-left: 50%;
+        text-align: right;
+        min-height: 2.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+    }
+
+    .portfolio-list td:before {
+        content: attr(data-label);
+        position: absolute;
+        left: 0;
+        width: 45%;
+        padding-right: 10px;
+        white-space: nowrap;
+        font-weight: 600;
+        text-align: left;
+        color: var(--text-muted);
+    }
+
+    .portfolio-list td:last-child {
+        justify-content: flex-end;
+        padding-left: 0;
+    }
+
+    .portfolio-list td:last-child:before {
+        content: none;
+    }
+}
+/* ========================================
+   PORTFOLIO SHOWCASE MOBILE OPTIMIZATION
+   ======================================== */
+
+/* Hide card view on desktop, show table */
+.portfolio-card-view {
+    display: none;
+}
+
+.portfolio-table-view {
+    display: block;
+}
+
+/* Portfolio Card Styles for Mobile */
+.portfolio-card {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    transition: all 0.3s ease;
+}
+
+.portfolio-card:hover {
+    transform: translateY(-2px);
+    border-color: var(--primary-color);
+    box-shadow: 0 8px 20px rgba(108, 99, 255, 0.15);
+}
+
+.portfolio-card-header {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    align-items: flex-start;
+}
+
+.portfolio-card-img {
+    width: 70px;
+    height: 70px;
+    border-radius: 10px;
+    object-fit: cover;
+    border: 2px solid var(--border-color);
+    flex-shrink: 0;
+}
+
+.portfolio-card-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.portfolio-card-title {
+    margin: 0 0 0.5rem 0;
+    font-size: 1.1rem;
+    color: #fff;
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.portfolio-card-detail {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.6rem 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.portfolio-card-detail:last-of-type {
+    border-bottom: none;
+}
+
+.detail-label {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+.detail-value {
+    font-size: 0.9rem;
+    color: #fff;
+    font-weight: 500;
+}
+
+.portfolio-card-actions {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.portfolio-card-actions .btn-small {
+    font-size: 0.85rem;
+    padding: 0.6rem 1rem;
+    border-radius: 8px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.portfolio-card-actions .btn-small:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+/* Mobile Breakpoint */
+@media (max-width: 768px) {
+    /* Hide table, show cards */
+    .portfolio-table-view {
+        display: none !important;
+    }
+    
+    .portfolio-card-view {
+        display: block;
+    }
+    
+    /* Adjust card spacing */
+    .portfolio-card {
+        padding: 1.25rem;
+    }
+    
+    .portfolio-card-header {
+        gap: 0.75rem;
+    }
+    
+    .portfolio-card-img {
+        width: 60px;
+        height: 60px;
+    }
+    
+    .portfolio-card-title {
+        font-size: 1rem;
+        white-space: normal;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+}
+
+@media (max-width: 480px) {
+    .portfolio-card {
+        padding: 1rem;
+    }
+    
+    .portfolio-card-img {
+        width: 55px;
+        height: 55px;
+    }
+    
+    .portfolio-card-title {
+        font-size: 0.95rem;
+    }
+    
+    .detail-label,
+    .detail-value {
+        font-size: 0.8rem;
+    }
+    
+    .portfolio-card-actions .btn-small {
+        font-size: 0.75rem;
+        padding: 0.5rem 0.75rem;
+    }
+}
+
+/* ========================================
+   DELETE BUTTON FIX
+   ======================================== */
+
+/* Ensure delete links styled as buttons are clickable */
+a.btn-small {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    text-decoration: none;
+    cursor: pointer;
+    pointer-events: auto;
+    position: relative;
+    z-index: 1;
+}
+
+a.btn-small:hover {
+    text-decoration: none;
+    opacity: 0.9;
+}
+
+a.btn-small:active {
+    transform: scale(0.95);
+}
+
+/* Ensure icons inside links don't block clicks */
+a.btn-small i {
+    pointer-events: none;
+}
+
+/* Fix for delete buttons in tables */
+table td a.btn-small {
+    display: inline-flex;
+    min-width: auto;
+}
+
+/* Fix for delete buttons in cards */
+.portfolio-card-actions a.btn-small {
+    display: flex;
+    flex: 1;
+    min-width: 0;
+}
+
+/* Ensure proper stacking context */
+.portfolio-card-actions,
+table td > div {
+    position: relative;
+    z-index: 1;
+}
+/* ========================================
+   LAPTOP & DESKTOP OPTIMIZATIONS
+   (Fix for disturbed templates on laptops)
+   ======================================== */
+
+@media (max-width: 1366px) {
+    :root {
+        --container-padding: 1.5rem;
+    }
+    
+    .container {
+        max-width: 1200px;
+        padding: 0 var(--container-padding);
+    }
+    
+    /* Optimize Hero for Laptops */
+    h1 {
+        font-size: 2.8rem;
+    }
+    
+    .hero {
+        min-height: 80vh;
+        height: auto;
+        padding: 120px 0 60px;
+    }
+    
+    /* Navbar spacing fix */
+    .nav-menu {
+        gap: 1.25rem;
+    }
+    
+    .nav-link {
+        font-size: 0.95rem;
+    }
+    
+    /* Sections tight scaling */
+    .section {
+        padding: 4rem 0;
+    }
+    
+    .section-header {
+        margin-bottom: 3rem;
+    }
+    
+    /* Dashboard Table Squashing Fix */
+    .dashboard-container {
+        max-width: 100%;
+        padding: 0 1.5rem;
+    }
+    
+    .table-responsive {
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        overflow-x: auto;
+    }
+    
+    table th, table td {
+        padding: 1rem 0.75rem;
+        font-size: 0.8rem;
+    }
+    
+    /* Action columns protection */
+    td:last-child {
+        min-width: 150px;
+    }
+    
+    /* Admin Nav scroll hint */
+    .admin-nav {
+        gap: 0.75rem;
+        padding-bottom: 0.8rem;
+    }
+    
+    .tab-link {
+        padding: 0.5rem 1rem;
+        font-size: 0.85rem;
+    }
+}
+
+/* Specific fix for high-DPI laptops (like Macbooks) */
+@media (min-width: 1025px) and (max-width: 1440px) {
+    .services-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+    
+    .portfolio-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+/* Fix for overlapping elements in contact section */
+.contact-wrapper {
+    align-items: flex-start;
+}
+
+.contact-form {
+    align-self: flex-start;
+}

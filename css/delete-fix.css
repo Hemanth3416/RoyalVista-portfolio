@@ -1,0 +1,89 @@
+/* ========================================
+   COMPREHENSIVE DELETE BUTTON FIX
+   Make ALL delete buttons/links clickable
+   ======================================== */
+
+/* Reset any conflicting styles */
+a[href*="delete"],
+button[onclick*="delete"],
+.btn-danger,
+a.btn-small[href*="delete"] {
+    pointer-events: auto !important;
+    cursor: pointer !important;
+    position: relative;
+    z-index: 10 !important;
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Ensure icons don't block clicks */
+a[href*="delete"] i,
+button[onclick*="delete"] i,
+.btn-danger i {
+    pointer-events: none !important;
+}
+
+/* Ensure parent containers don't block */
+table td,
+.portfolio-card-actions,
+.job-card-actions,
+td>div,
+td>a {
+    position: relative;
+    z-index: 1;
+}
+
+/* Make sure table cells allow clicks */
+table td {
+    pointer-events: auto;
+}
+
+/* Specific fixes for portfolio delete */
+a[href*="delete_portfolio"] {
+    pointer-events: auto !important;
+    cursor: pointer !important;
+    z-index: 100 !important;
+    text-decoration: none;
+}
+
+/* Specific fixes for job delete */
+button[onclick*="deleteJob"] {
+    pointer-events: auto !important;
+    cursor: pointer !important;
+    z-index: 100 !important;
+}
+
+/* Hover states to confirm clickability */
+a[href*="delete"]:hover,
+button[onclick*="delete"]:hover,
+.btn-danger:hover {
+    opacity: 0.8;
+    transform: translateY(-1px);
+}
+
+/* Active state for touch feedback */
+a[href*="delete"]:active,
+button[onclick*="delete"]:active,
+.btn-danger:active {
+    transform: scale(0.95);
+}
+
+/* Ensure no overlay blocks clicks */
+.card::before,
+.card::after,
+table::before,
+table::after {
+    pointer-events: none !important;
+}
+
+/* Mobile specific fixes */
+@media (max-width: 768px) {
+
+    a[href*="delete"],
+    button[onclick*="delete"] {
+        min-height: 44px;
+        min-width: 44px;
+        padding: 0.6rem 1rem !important;
+    }
+}
